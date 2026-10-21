@@ -218,3 +218,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project runtime artifacts
+storage/
+cache/
+webos.db
+webos.db-*
+.DS_Store

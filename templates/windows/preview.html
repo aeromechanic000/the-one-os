@@ -1,0 +1,10 @@
+<template id="tpl-preview">
+  <div class="preview-wrap">
+    <div class="preview-toolbar">
+      <span class="preview-name mono" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px"></span>
+      <a class="btn btn-sm preview-download" download>{{ t('pv_download') }}</a>
+    </div>
+    <div class="preview-banner" hidden></div>
+    <div class="preview-body"><div class="preview-unsupported">{{ t('pv_loading') }}</div></div>
+  </div>
+</template>

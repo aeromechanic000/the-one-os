@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}{{ t('app_title') }}{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/main.css">
+  <link rel="stylesheet" href="/static/css/mobile.css">
+  <link rel="stylesheet" href="/static/css/keyboard.css">
+  {% block head %}{% endblock %}
+  <script>
+    window.I18N = {{ I18N_JSON|safe }};
+    window.t = function (key, kwargs) {
+      var s = window.I18N[key] || key;
+      if (kwargs) {
+        Object.keys(kwargs).forEach(function (k) {
+          s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), kwargs[k]);
+        });
+      }
+      return s;
+    };
+  </script>
+</head>
+<body class="{% block bodyclass %}{% endblock %}">
+{% block content %}{% endblock %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

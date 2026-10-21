@@ -1,0 +1,54 @@
+<template id="tpl-hosts">
+  <div class="hosts-wrap">
+    <div class="hosts-toolbar">
+      <button class="btn btn-primary btn-sm host-add">{{ t('hm_add') }}</button>
+    </div>
+    <div class="hosts-table-wrap">
+      <table class="tbl hosts-table">
+        <thead>
+          <tr>
+            <th>{{ t('f_name') }}</th>
+            <th>{{ t('f_host') }}</th>
+            <th>{{ t('f_username') }}</th>
+            <th>{{ t('status_online') }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody class="hosts-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</template>
+
+<template id="tpl-host-form">
+  <form class="host-form">
+    <div class="form-row">
+      <div><label class="field-label">{{ t('f_name') }}</label><input name="name" required maxlength="64"></div>
+      <div><label class="field-label">{{ t('f_group') }}</label><input name="group_name" maxlength="64"></div>
+    </div>
+    <div class="form-row">
+      <div><label class="field-label">{{ t('f_host') }}</label><input name="host" required maxlength="255"></div>
+      <div><label class="field-label">{{ t('f_port') }}</label><input name="port" type="number" value="22" min="1" max="65535"></div>
+    </div>
+    <div class="form-row">
+      <div><label class="field-label">{{ t('f_username') }}</label><input name="username" value="root"></div>
+      <div><label class="field-label">{{ t('f_auth') }}</label>
+        <select name="auth_method">
+          <option value="password">{{ t('auth_password') }}</option>
+          <option value="key">{{ t('auth_key') }}</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="host-f-password" style="flex:1">
+        <label class="field-label">{{ t('f_password') }}</label>
+        <input name="password" type="password" autocomplete="new-password">
+      </div>
+      <div class="host-f-key" style="flex:1" hidden>
+        <label class="field-label">{{ t('f_keyfile') }}</label>
+        <input name="key_path" placeholder="/home/user/.ssh/id_rsa">
+      </div>
+    </div>
+    <div class="host-needs-pw" hidden>{{ t('hm_needs_password') }}</div>
+  </form>
+</template>

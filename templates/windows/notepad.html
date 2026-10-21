@@ -1,0 +1,11 @@
+<template id="tpl-notepad">
+  <div class="notepad-wrap">
+    <div class="notepad-toolbar">
+      <button class="btn btn-sm" data-act="send">{{ t('send_to_terminal') }}</button>
+      <button class="btn btn-sm" data-act="copy">{{ t('copy') }}</button>
+      <button class="btn btn-sm" data-act="clear">{{ t('clear') }}</button>
+      <span class="notepad-drag" draggable="true" title="Drag to a terminal to paste">⠿ {{ t('notepad') }}</span>
+    </div>
+    <textarea class="notepad-text" placeholder="{{ t('notepad_placeholder') }}"></textarea>
+  </div>
+</template>

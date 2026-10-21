@@ -1,0 +1,116 @@
+<template id="tpl-settings">
+  <div class="settings-wrap">
+    <div class="settings-tabs">
+      <button data-tab="input" class="active">{{ t('sec_input') }}</button>
+      <button data-tab="rules">{{ t('sec_attention') }}</button>
+      <button data-tab="office">{{ t('sec_office') }}</button>
+    </div>
+    <div class="settings-body">
+      <section data-pane="input">
+        <div class="settings-section">
+          <h3>{{ t('kb_mode') }}</h3>
+          <div class="radio-row kb-mode-row">
+            <button class="radio-pill" data-v="windows">{{ t('kb_windows') }}</button>
+            <button class="radio-pill" data-v="mac">{{ t('kb_mac') }}</button>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h3>{{ t('kb_strategy') }}</h3>
+          <div class="radio-row kb-strategy-row">
+            <button class="radio-pill" data-v="coexist">{{ t('kb_coexist') }}</button>
+            <button class="radio-pill" data-v="replace">{{ t('kb_replace') }}</button>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h3>{{ t('kb_fontsize') }}</h3>
+          <input type="range" class="kb-fontsize" min="8" max="32" step="1" style="width: 200px">
+          <span class="kb-fontsize-val mono"></span>
+        </div>
+        <div class="settings-section">
+          <h3>{{ t('kb_custom') }}</h3>
+          <div class="custom-keys-list"></div>
+          <button class="btn btn-sm ck-add" style="margin-top: 8px">{{ t('kb_add_key') }}</button>
+        </div>
+      </section>
+
+      <section data-pane="rules" hidden>
+        <div class="settings-section">
+          <div class="form-row" style="align-items:center">
+            <h3 style="flex:1">{{ t('sec_attention') }}</h3>
+            <button class="btn btn-sm rule-add">{{ t('ar_add') }}</button>
+            <button class="btn btn-sm rule-import">{{ t('ar_import') }}</button>
+            <button class="btn btn-sm rule-export">{{ t('ar_export') }}</button>
+            <input type="file" class="rule-import-file" accept=".json" hidden>
+          </div>
+          <table class="tbl rules-table">
+            <thead>
+              <tr>
+                <th>{{ t('ar_enabled') }}</th>
+                <th>{{ t('ar_name') }}</th>
+                <th>{{ t('ar_confidence') }}</th>
+                <th>{{ t('ar_priority') }}</th>
+                <th>{{ t('ar_hits') }}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody class="rules-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section data-pane="office" hidden>
+        <div class="settings-section">
+          <h3>{{ t('op_method') }}</h3>
+          <div class="radio-row office-method-row">
+            <button class="radio-pill" data-v="libreoffice">{{ t('op_libreoffice') }}</button>
+            <button class="radio-pill" data-v="frontend">{{ t('op_frontend') }}</button>
+            <button class="radio-pill" data-v="disabled">{{ t('op_disabled') }}</button>
+          </div>
+          <p class="office-status" style="color: var(--text-dim); font-size: 12px"></p>
+        </div>
+      </section>
+    </div>
+  </div>
+</template>
+
+<template id="tpl-rule-editor">
+  <div class="rule-editor">
+    <div class="form-row">
+      <div><label class="field-label">{{ t('ar_name') }}</label><input class="re-name" maxlength="64"></div>
+      <div><label class="field-label">{{ t('ar_match_mode') }}</label>
+        <select class="re-mode">
+          <option value="any">any</option>
+          <option value="all">all</option>
+          <option value="sequence">sequence</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div><label class="field-label">{{ t('ar_silence') }}</label><input class="re-silence" type="number" min="0" max="5000" value="400"></div>
+      <div><label class="field-label">{{ t('ar_confidence') }}</label>
+        <select class="re-confidence">
+          <option value="high">high</option>
+          <option value="medium">medium</option>
+          <option value="low">low</option>
+        </select>
+      </div>
+      <div><label class="field-label">{{ t('ar_priority') }}</label><input class="re-priority" type="number" min="0" max="9999" value="100"></div>
+      <div><label class="field-label">{{ t('ar_window') }}</label><input class="re-window" type="number" min="0" max="600000" value="30000"></div>
+    </div>
+    <label class="field-label">{{ t('ar_patterns') }}</label>
+    <div class="re-features"></div>
+    <button class="btn btn-sm re-add-feature">{{ t('ar_add_feature') }}</button>
+    <div class="test-area" style="margin-top: 10px">
+      <label class="field-label">{{ t('ar_sample') }} — {{ t('ar_sample_hint') }}</label>
+      <textarea class="re-sample" placeholder="[sudo] password for user: "></textarea>
+      <div class="form-row" style="margin-top: 8px; align-items: center">
+        <button class="btn btn-sm re-test">{{ t('ar_test') }}</button>
+        <span class="test-result"></span>
+      </div>
+    </div>
+    <div class="form-row" style="margin-top: 12px; justify-content: flex-end">
+      <button class="btn btn-sm re-cancel">{{ t('cancel') }}</button>
+      <button class="btn btn-primary btn-sm re-save">{{ t('save') }}</button>
+    </div>
+  </div>
+</template>

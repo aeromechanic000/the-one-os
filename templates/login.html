@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ t('login_title') }}{% endblock %}
+{% block bodyclass %}login-body{% endblock %}
+{% block content %}
+<div class="login-card">
+  <div class="login-logo" aria-hidden="true">&#9670;</div>
+  <h1>{{ t('login_title') }}</h1>
+  <form id="login-form" autocomplete="off">
+    <label class="field-label" for="password">{{ t('login_password') }}</label>
+    <input id="password" type="password" name="password"
+           autocomplete="current-password" autofocus required>
+    <div id="login-error" class="login-error" role="alert" hidden></div>
+    <button type="submit" class="btn btn-primary btn-block">{{ t('login_button') }}</button>
+  </form>
+  <p class="login-hint">{{ t('login_hint') }}</p>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var form = document.getElementById('login-form');
+  var err = document.getElementById('login-error');
+  form.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    err.hidden = true;
+    fetch('/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({password: document.getElementById('password').value})
+    }).then(function (r) {
+      if (r.ok) { window.location.href = '/'; return null; }
+      return r.json();
+    }).then(function (data) {
+      if (data) {
+        err.textContent = data.error || window.t('login_invalid');
+        err.hidden = false;
+      }
+    }).catch(function () {
+      err.textContent = window.t('login_invalid');
+      err.hidden = false;
+    });
+  });
+})();
+</script>
+{% endblock %}

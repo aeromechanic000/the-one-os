@@ -1,0 +1,17 @@
+<template id="tpl-files">
+  <div class="files-wrap">
+    <div class="files-toolbar">
+      <select class="files-source"></select>
+      <button class="btn btn-sm" data-act="refresh">{{ t('refresh') }}</button>
+      <button class="btn btn-sm" data-act="upload">{{ t('upload') }}</button>
+      <button class="btn btn-sm" data-act="mkdir">{{ t('new_folder') }}</button>
+      <input type="file" class="files-upload-input" multiple hidden>
+    </div>
+    <div class="files-breadcrumb"></div>
+    <div class="files-list"></div>
+    <div class="transfer-section">
+      <div class="transfer-head">{{ t('queue') }}</div>
+      <div class="transfer-queue"></div>
+    </div>
+  </div>
+</template>

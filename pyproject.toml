@@ -1,0 +1,21 @@
+[project]
+name = "the-one-webos"
+version = "0.1.0"
+description = "The One Web OS - single-user, desktop-style, cross-device server operations workbench"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+dependencies = [
+    "flask>=3.0",
+    "flask-socketio>=5.3",
+    "simple-websocket>=1.0",
+    "paramiko>=3.4",
+    "cryptography>=42.0",
+    "gunicorn>=22.0",
+]
+
+[dependency-groups]
+dev = [
+    "requests>=2.31",
+    "websocket-client>=1.7",
+]

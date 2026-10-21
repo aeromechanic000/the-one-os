@@ -1,0 +1,16 @@
+<template id="tpl-actions">
+  <div class="actions-wrap">
+    <div class="actions-cats"></div>
+    <div class="actions-main">
+      <div class="form-row">
+        <div>
+          <label class="field-label">{{ t('f_host') }}</label>
+          <select class="actions-host"></select>
+        </div>
+      </div>
+      <div class="actions-form"></div>
+      <button class="btn btn-primary actions-run">{{ t('qa_run') }}</button>
+      <pre class="actions-output actions-empty">{{ t('qa_no_selection') }}</pre>
+    </div>
+  </div>
+</template>

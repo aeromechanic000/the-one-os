@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}{{ t('app_title') }}{% endblock %}
+{% block bodyclass %}shell{% endblock %}
+{% block content %}
+<header id="topbar">
+  <div class="tb-brand"><span class="logo">&#9670;</span>Web OS</div>
+  <div class="tb-status">
+    <button class="tb-chip" id="tb-online" title="">—</button>
+    <button class="tb-chip attention" id="tb-waiting" hidden></button>
+    <span class="tb-chip" id="tb-session"></span>
+    <span class="tb-chip mono" id="tb-clock"></span>
+    <button class="tb-chip" id="tb-logout" title="Sign out">&#8681;</button>
+  </div>
+</header>
+
+<main id="desktop-layer">
+  <div id="icon-grid"></div>
+  <div id="desktop-empty" class="desktop-empty" hidden>{{ t('no_hosts') }}</div>
+  <div id="phone-home" hidden>
+    <div id="phone-host-list"></div>
+  </div>
+  <div id="windows-layer"></div>
+
+  <nav id="phone-nav" hidden>
+    <button data-nav="hosts"><span class="nav-ico">&#9635;</span>{{ t('nav_hosts') }}</button>
+    <button data-nav="terminal"><span class="nav-ico">&#9000;</span>{{ t('nav_terminal') }}</button>
+    <button data-nav="files"><span class="nav-ico">&#128193;</span>{{ t('nav_files') }}</button>
+    <button data-nav="settings"><span class="nav-ico">&#9881;</span>{{ t('nav_settings') }}</button>
+  </nav>
+</main>
+
+<footer id="taskbar">
+  <button id="start-btn">&#9654; {{ t('start') }}</button>
+  <div id="taskbar-tabs"></div>
+</footer>
+
+<div id="start-menu" hidden></div>
+<div id="app-switcher" hidden></div>
+<div id="ctx-menu" hidden></div>
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+
+{% include "windows/terminal.html" %}
+{% include "windows/notepad.html" %}
+{% include "windows/files.html" %}
+{% include "windows/actions.html" %}
+{% include "windows/hosts.html" %}
+{% include "windows/settings.html" %}
+{% include "windows/preview.html" %}
+{% endblock %}
+
+{% block scripts %}
+<link rel="stylesheet" href="/static/vendor/xterm.css">
+<script src="/static/vendor/socket.io.min.js"></script>
+<script src="/static/vendor/xterm.js"></script>
+<script src="/static/vendor/xterm-addon-fit.js"></script>
+<script src="/static/vendor/pdf.min.js"></script>
+<script src="/static/vendor/marked.min.js"></script>
+<script src="/static/vendor/purify.min.js"></script>
+<script src="/static/vendor/docx-preview.min.js"></script>
+<script src="/static/vendor/xlsx.full.min.js"></script>
+<script>window.pdfjsLib && (window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/static/vendor/pdf.worker.min.js');</script>
+<script>window.OS_BOOT = {officeAvailable: {{ 'true' if office_available else 'false' }}};</script>
+
+<script src="/static/js/core.js"></script>
+<script src="/static/js/layout.js"></script>
+<script src="/static/js/desktop.js"></script>
+<script src="/static/js/terminal.js"></script>
+<script src="/static/js/keyboard.js"></script>
+<script src="/static/js/notepad.js"></script>
+<script src="/static/js/transfer.js"></script>
+<script src="/static/js/files.js"></script>
+<script src="/static/js/preview.js"></script>
+<script src="/static/js/actions.js"></script>
+<script src="/static/js/settings.js"></script>
+<script src="/static/js/boot.js"></script>
+{% endblock %}
