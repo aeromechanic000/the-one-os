@@ -348,7 +348,33 @@
   }
 
   // ================= taskbar tabs / start menu / switcher =================
+  // Brand state: the diamond (taskbar logo + favicon) is filled while any
+  // host terminal window exists and hollow when none — the tab icon shows
+  // at a glance whether a server session is live.
+  var _brandHasHost = null;
+  function updateBrandIcons() {
+    var hasHost = false;
+    wm.windows.forEach(function (w) {
+      if (w.type === 'terminal') hasHost = true;
+    });
+    if (hasHost === _brandHasHost) return;
+    _brandHasHost = hasHost;
+    var logo = OS.$('.tb-brand .logo');
+    if (logo) {
+      logo.innerHTML = OS.iconSvg(hasHost ? 'diamondFill' : 'diamond');
+    }
+    OS.$$('link[rel="icon"]').forEach(function (l) {
+      if (l.type === 'image/svg+xml') {
+        l.href = hasHost ? '/static/favicon.svg' : '/static/favicon-outline.svg';
+      } else {
+        l.href = hasHost ? '/static/favicon-32.png'
+                         : '/static/favicon-outline-32.png';
+      }
+    });
+  }
+
   function renderTabs() {
+    updateBrandIcons();
     var tabs = OS.$('#taskbar-tabs');
     if (!tabs) return;
     tabs.innerHTML = '';

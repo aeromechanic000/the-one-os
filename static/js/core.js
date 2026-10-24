@@ -118,7 +118,8 @@
       'l-.4-1.6L11 13l1.6-.4z"/>',
     logout: '<path d="M6.5 2.5h-3v11h3"/><path d="M9 8h5M11.5 5.5 14 8l-2.5 2.5"/>',
     play: '<path d="M5 3.5v9l7.5-4.5z"/>',
-    diamond: '<path d="M8 1.5 14.5 8 8 14.5 1.5 8z"/>'
+    diamond: '<path d="M8 1.5 14.5 8 8 14.5 1.5 8z"/>',
+    diamondFill: '<path d="M8 1.5 14.5 8 8 14.5 1.5 8z" fill="currentColor" stroke="none"/>'
   };
   var ICON_SVG = {};
   Object.keys(ICON_PATHS).forEach(function (name) {

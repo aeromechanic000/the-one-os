@@ -114,7 +114,11 @@ table.tbl th { color: var(--text-dim); font-weight: 500; font-size: 12px; }
   border-bottom: 1px solid var(--border); flex: 0 0 auto; z-index: 500;
 }
 .tb-brand { font-weight: 600; letter-spacing: 0.02em; }
-.tb-brand .logo { color: var(--accent); margin-right: 6px; }
+.tb-brand .logo {
+  color: var(--accent); margin-right: 6px;
+  display: inline-flex; vertical-align: -2px;
+}
+.tb-brand .logo svg { width: 13px; height: 13px; display: block; }
 .tb-status { display: flex; align-items: center; gap: 8px; }
 .tb-chip {
   background: none; border: none; color: var(--text-dim); font-size: 12px;
