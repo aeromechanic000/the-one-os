@@ -20,6 +20,19 @@
       return s;
     };
   </script>
+  <script>
+    // apply the saved color theme before first paint (no flash);
+    // values are stored by js/theme.js via OS.store ('os-theme', JSON)
+    (function () {
+      try {
+        var theme = JSON.parse(localStorage.getItem('os-theme'));
+        if (theme && typeof theme === 'string' &&
+            /^[a-z-]+$/.test(theme) && theme !== 'midnight') {
+          document.documentElement.setAttribute('data-theme', theme);
+        }
+      } catch (e) { /* corrupted storage — fall back to default */ }
+    })();
+  </script>
 </head>
 <body class="{% block bodyclass %}{% endblock %}">
 {% block content %}{% endblock %}

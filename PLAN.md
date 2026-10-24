@@ -45,7 +45,13 @@ GET     /api/files/download     ?target=local|remote&host_id=&path=
 GET     /api/preview            ?source=local|remote&host_id=&path=
 GET/POST /api/attention/rules   CRUD; POST /api/attention/rules/test {rule, sample}
 GET     /api/attention/rules/export   POST /api/attention/rules/import
-GET/PUT /api/settings           key–value store
+GET/PUT /api/settings           key–value store (incl. ai_base_url, ai_model,
+                                ai_api_key [write-only], history_days,
+                                max_single_file_mb, max_storage_mb)
+POST    /api/ai/chat            {messages:[{role,content}]} → {reply} | 400/502
+                                (OpenAI-compatible proxy; injects a 7-day
+                                operation-history digest as context)
+GET     /api/history            ?days=&limit= → [{ts,type,host,detail}]
 ```
 
 ### SocketIO events
@@ -55,7 +61,7 @@ Server→client: `terminal_output {sid,data}`, `terminal_meta {sid,host_id,name,
 
 ### DB tables
 
-`hosts`, `actions`, `staged_files`, `attention_rules` (IDEA.md §7.1), `settings(key,value)`.
+`hosts`, `actions`, `staged_files`, `attention_rules` (IDEA.md §7.1), `settings(key,value)`, `op_history(ts,type,host,detail)` — operation log pruned hourly per the `history_days` setting; read by the AI assistant.
 
 ## Phase details
 

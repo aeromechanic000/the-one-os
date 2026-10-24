@@ -3,13 +3,14 @@
 {% block bodyclass %}shell{% endblock %}
 {% block content %}
 <header id="topbar">
-  <div class="tb-brand"><span class="logo">&#9670;</span>Web OS</div>
+  <div class="tb-brand"><span class="logo"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M8 1.5 14.5 8 8 14.5 1.5 8z"/></svg></span>One OS</div>
   <div class="tb-status">
     <button class="tb-chip" id="tb-online" title="">—</button>
     <button class="tb-chip attention" id="tb-waiting" hidden></button>
     <span class="tb-chip" id="tb-session"></span>
     <span class="tb-chip mono" id="tb-clock"></span>
-    <button class="tb-chip" id="tb-logout" title="Sign out">&#8681;</button>
+    <button class="tb-chip" id="tb-ai" title="{{ t('ai_open') }}"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5l1.5 3.9 3.9 1.5-3.9 1.5L8 12.4 6.5 8.4 2.6 6.9l3.9-1.5z"/><path d="M13 11l.6 1.6 1.6.4-1.6.4L13 15l-.4-1.6L11 13l1.6-.4z"/></svg></button>
+    <button class="tb-chip" id="tb-logout" title="Sign out"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2.5h-3v11h3"/><path d="M9 8h5M11.5 5.5 14 8l-2.5 2.5"/></svg></button>
   </div>
 </header>
 
@@ -22,17 +23,31 @@
   <div id="windows-layer"></div>
 
   <nav id="phone-nav" hidden>
-    <button data-nav="hosts"><span class="nav-ico">&#9635;</span>{{ t('nav_hosts') }}</button>
-    <button data-nav="terminal"><span class="nav-ico">&#9000;</span>{{ t('nav_terminal') }}</button>
-    <button data-nav="files"><span class="nav-ico">&#128193;</span>{{ t('nav_files') }}</button>
-    <button data-nav="settings"><span class="nav-ico">&#9881;</span>{{ t('nav_settings') }}</button>
+    <button data-nav="hosts"><span class="nav-ico"><svg viewBox="0 0 16 16" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="11" height="4.5" rx="1"/><rect x="2.5" y="9" width="11" height="4.5" rx="1"/><path d="M5 4.75h.01M5 11.25h.01"/></svg></span>{{ t('nav_hosts') }}</button>
+    <button data-nav="terminal"><span class="nav-ico"><svg viewBox="0 0 16 16" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M5 7l2.5 2.5L5 12M9.5 12H12"/></svg></span>{{ t('nav_terminal') }}</button>
+    <button data-nav="files"><span class="nav-ico"><svg viewBox="0 0 16 16" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5c0-.6.4-1 1-1h3l1.5 2H13c.6 0 1 .4 1 1v6c0 .6-.4 1-1 1H3c-.6 0-1-.4-1-1z"/></svg></span>{{ t('nav_files') }}</button>
+    <button data-nav="settings"><span class="nav-ico"><svg viewBox="0 0 16 16" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.4"/><path d="M8 1.8v2.1M8 12.1v2.1M1.8 8h2.1M12.1 8h2.1M3.6 3.6l1.5 1.5M10.9 10.9l1.5 1.5M12.4 3.6l-1.5 1.5M5.1 10.9l-1.5 1.5"/></svg></span>{{ t('nav_settings') }}</button>
   </nav>
 </main>
 
 <footer id="taskbar">
-  <button id="start-btn">&#9654; {{ t('start') }}</button>
+  <button id="start-btn"><svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor" aria-hidden="true"><path d="M5 3.5v9l7.5-4.5z"/></svg> {{ t('start') }}</button>
   <div id="taskbar-tabs"></div>
 </footer>
+
+<aside id="ai-panel" aria-hidden="true">
+  <div class="ai-head">
+    <span class="ai-title">{{ t('ai_panel_title') }}</span>
+    <button class="win-btn" id="ai-clear" title="{{ t('ai_clear_chat') }}"></button>
+    <button class="win-btn close" id="ai-close" title="{{ t('close') }}"></button>
+  </div>
+  <div class="ai-messages" id="ai-messages"></div>
+  <div class="ai-input-row">
+    <textarea id="ai-input" rows="1" placeholder="{{ t('ai_placeholder') }}"></textarea>
+    <button class="btn btn-primary" id="ai-send">{{ t('send') }}</button>
+  </div>
+  <div class="ai-foot">{{ t('ai_hint_history') }}</div>
+</aside>
 
 <div id="start-menu" hidden></div>
 <div id="app-switcher" hidden></div>
@@ -63,6 +78,7 @@
 <script>window.OS_BOOT = {officeAvailable: {{ 'true' if office_available else 'false' }}};</script>
 
 <script src="/static/js/core.js"></script>
+<script src="/static/js/theme.js"></script>
 <script src="/static/js/layout.js"></script>
 <script src="/static/js/desktop.js"></script>
 <script src="/static/js/terminal.js"></script>
@@ -73,5 +89,6 @@
 <script src="/static/js/preview.js"></script>
 <script src="/static/js/actions.js"></script>
 <script src="/static/js/settings.js"></script>
+<script src="/static/js/chat.js"></script>
 <script src="/static/js/boot.js"></script>
 {% endblock %}

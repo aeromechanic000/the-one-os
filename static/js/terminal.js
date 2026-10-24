@@ -119,6 +119,16 @@
     }
   };
 
+  // live theme switching: restyle every open terminal in place
+  OS.bus.on('theme', function () {
+    term.sessions.forEach(function (s) {
+      if (s.term) {
+        try { s.term.options.theme = OS.theme.xtermTheme(); }
+        catch (e) { /* older xterm builds — new windows pick it up anyway */ }
+      }
+    });
+  });
+
   OS.winInit.terminal = function (win) {
     var sid = win.opts.sid;
     var s = term.sessions.get(sid);
@@ -130,12 +140,7 @@
       fontSize: fontSize,
       fontFamily: '"JetBrains Mono", "Cascadia Code", "SF Mono", Menlo, Consolas, monospace',
       cursorBlink: true,
-      theme: {
-        background: '#16161f',
-        foreground: '#e6e6f0',
-        cursor: '#4fc3f7',
-        selectionBackground: 'rgba(79,195,247,0.28)'
-      },
+      theme: OS.theme.xtermTheme(),
       scrollback: 5000,
       allowProposedApi: true
     });

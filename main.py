@@ -29,7 +29,7 @@ def print_banner(host="127.0.0.1", port=11686):
     shown_host = host if host not in ("0.0.0.0", "::") else \
         f"<this machine's address> (bound {host})"
     print("==============================================================", flush=True)
-    print("  Web OS — single-user server operations workbench", flush=True)
+    print("  One OS — single-user server operations workbench", flush=True)
     print("--------------------------------------------------------------", flush=True)
     print(f"  Password  : {PASSWORD}", flush=True)
     print(f"  Boot ID   : {BOOT_ID}", flush=True)

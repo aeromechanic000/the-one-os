@@ -5,9 +5,10 @@
   var OS = window.OS;
   var $ = OS.$, $$ = OS.$$;
 
-  var FILE_GLYPHS = {
-    dir: '📁', img: '🖼', video: '🎞', audio: '🎵', pdf: '📄',
-    code: '⌨', text: '📄', archive: '🗜', office: '📊', unknown: '▪'
+  var FILE_ICONS = {
+    dir: 'folder', img: 'image', video: 'film', audio: 'music',
+    pdf: 'docText', code: 'code', text: 'docText', archive: 'archive',
+    office: 'table', unknown: 'doc'
   };
   var EXT_KIND = {
     img: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'],
@@ -146,7 +147,9 @@
       files.state.entries.forEach(function (entry) {
         var kind = kindOf(entry);
         var row = OS.el('div', 'file-row');
-        row.appendChild(OS.el('span', 'file-ico', FILE_GLYPHS[kind]));
+        var ico = OS.el('span', 'file-ico');
+        ico.innerHTML = OS.iconSvg(FILE_ICONS[kind] || 'doc');
+        row.appendChild(ico);
         var name = OS.el('span', 'file-name mono', entry.name);
         row.appendChild(name);
         if (kind !== 'dir' && kind !== 'unknown' && entry.ext) {
@@ -212,17 +215,17 @@
     function entryMenu(entry, x, y) {
       var items = [];
       if (entry.type === 'file') {
-        items.push({icon: '◎', label: OS.t('preview'),
+        items.push({icon: 'eye', label: OS.t('preview'),
           onClick: function () { previewEntry(entry); }});
-        items.push({icon: '↓', label: OS.t('download'),
+        items.push({icon: 'download', label: OS.t('download'),
           onClick: function () { downloadEntry(entry); }});
         items.push('-');
-        items.push({icon: '→', label: OS.t('send_to_server'),
+        items.push({icon: 'send', label: OS.t('send_to_server'),
           onClick: function () { sendDialog(entry); }});
       }
-      items.push({icon: '✎', label: OS.t('rename'),
+      items.push({icon: 'edit', label: OS.t('rename'),
         onClick: function () { renameEntry(entry); }});
-      items.push({icon: '✕', label: OS.t('delete'), danger: true,
+      items.push({icon: 'close', label: OS.t('delete'), danger: true,
         onClick: function () { deleteEntry(entry); }});
       OS.ctxMenu(items, x, y);
     }

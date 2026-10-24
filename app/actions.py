@@ -261,6 +261,10 @@ def run_action(action_id):
                                                timeout=RUN_TIMEOUT)
     except SSHError as exc:
         return jsonify({"error": str(exc)}), 502
+    from app import history
+    history.record(
+        "action_run", history.host_label(host_id),
+        "ran '%s' -> exit %d" % (row["name"], exit_status))
     return jsonify({"command": command, "output": output,
                     "exit_status": exit_status})
 

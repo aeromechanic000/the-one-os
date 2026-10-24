@@ -55,6 +55,9 @@
   /* fullscreen preview with back affordance */
   .preview-body { -webkit-overflow-scrolling: touch; }
 
+  /* AI chat panel takes the full phone width */
+  #ai-panel { width: 100vw; border-left: none; }
+
   .toast { bottom: 66px; }
 }
 

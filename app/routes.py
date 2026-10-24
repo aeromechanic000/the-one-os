@@ -6,10 +6,11 @@ import json
 from flask import Blueprint, jsonify, redirect, render_template, request, \
     session
 
-from app import auth, db
+from app import ai, auth, db, history
 from app import attention_rules
 from app.i18n import t
 from app.ssh_manager import manager
+from config import FERNET
 
 bp = Blueprint("routes", __name__)
 
@@ -19,6 +20,12 @@ SETTINGS_KEYS = {
     "custom_keys",            # JSON: [{label, sequence}]
     "terminal_font_size",     # px number as string
     "office_preview_method",  # libreoffice | frontend | disabled
+    "ai_base_url",            # OpenAI-compatible API base, e.g. https://x/v1
+    "ai_model",               # model id string
+    "ai_api_key_enc",         # Fernet-encrypted; written via ai_api_key only
+    "history_days",           # operation-history retention, days
+    "max_single_file_mb",     # single-file cap for transfers/uploads/preview
+    "max_storage_mb",         # total storage/ quota for the file browser
 }
 SETTINGS_DEFAULTS = {
     "keyboard_mode": "windows",
@@ -26,6 +33,12 @@ SETTINGS_DEFAULTS = {
     "custom_keys": "[]",
     "terminal_font_size": "14",
     "office_preview_method": "libreoffice",
+    "ai_base_url": "",
+    "ai_model": "",
+    "ai_api_key_enc": "",
+    "history_days": "90",
+    "max_single_file_mb": "512",
+    "max_storage_mb": "2048",
 }
 
 
@@ -50,6 +63,7 @@ def login_post():
     if not auth.verify_password(data.get("password", "")):
         return jsonify({"error": t("login_invalid")}), 401
     auth.login_session()
+    history.record("login", "", "signed in")
     return jsonify({"ok": True})
 
 
@@ -82,14 +96,32 @@ def get_settings():
         out["custom_keys"] = json.loads(out.get("custom_keys") or "[]")
     except ValueError:
         out["custom_keys"] = []
+    # never leak the API key ciphertext; expose set/re-entry flags instead
+    enc = out.pop("ai_api_key_enc", "")
+    out["ai_api_key_set"] = bool(enc)
+    if enc:
+        try:
+            FERNET.decrypt(enc.encode())
+        except Exception:
+            out["ai_api_key_needs_reentry"] = True
     return jsonify(out)
 
 
 @bp.put("/api/settings")
 def put_settings():
     data = request.get_json(silent=True) or {}
+    changed = []
+    # plaintext key arrives as ai_api_key and is stored encrypted
+    if "ai_api_key" in data:
+        key = str(data.get("ai_api_key") or "").strip()
+        if key:
+            db.set_setting("ai_api_key_enc",
+                           FERNET.encrypt(key.encode()).decode())
+        else:
+            db.set_setting("ai_api_key_enc", "")
+        changed.append("ai_api_key")
     for key, value in data.items():
-        if key not in SETTINGS_KEYS:
+        if key not in SETTINGS_KEYS or key == "ai_api_key_enc":
             continue
         if key == "custom_keys":
             if not isinstance(value, list):
@@ -115,8 +147,57 @@ def put_settings():
                     continue
             except (TypeError, ValueError):
                 continue
+        elif key == "ai_base_url":
+            url = str(value or "").strip()
+            if url and not (url.startswith("http://") or
+                            url.startswith("https://")):
+                continue
+            value = url[:512]
+        elif key == "ai_model":
+            value = str(value or "").strip()[:200]
+        elif key in ("history_days", "max_single_file_mb", "max_storage_mb"):
+            try:
+                n = int(value)
+            except (TypeError, ValueError):
+                continue
+            if key == "history_days":
+                if not 1 <= n <= 3650:
+                    continue
+            elif not 1 <= n <= 102400:
+                continue
+            value = str(n)
         db.set_setting(key, value)
+        changed.append(key)
+    if changed:
+        history.record("settings_update", "", "updated: " + ", ".join(changed))
     return get_settings()
+
+
+# --- AI assistant & operation history ----------------------------------------
+
+@bp.post("/api/ai/chat")
+def ai_chat():
+    data = request.get_json(silent=True) or {}
+    messages = data.get("messages")
+    if not isinstance(messages, list) or not messages:
+        return jsonify({"error": "messages required"}), 400
+    try:
+        reply = ai.chat(messages)
+    except ai.AIError as exc:
+        return jsonify({"error": str(exc)}), exc.status
+    first_user = next((str(m.get("content") or "")
+                       for m in messages
+                       if isinstance(m, dict) and m.get("role") == "user"), "")
+    history.record("ai_chat", "",
+                   ("asked: " + first_user)[:120] if first_user else "chat")
+    return jsonify({"reply": reply})
+
+
+@bp.get("/api/history")
+def history_entries():
+    days = request.args.get("days", 7, type=int) or 7
+    limit = request.args.get("limit", 500, type=int) or 500
+    return jsonify(history.list_history(days=days, limit=limit))
 
 
 # --- attention rules REST (IDEA.md §7.7) ---------------------------------------------

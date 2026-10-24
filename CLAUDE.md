@@ -4,7 +4,7 @@ Guidance for Claude Code working in this repository. The full design specificati
 
 ## What this project is
 
-"The One" Web OS: a single-user, desktop-style, cross-device, English-only server operations workbench. One Flask process serves a browser "OS" where each server is a desktop icon; features (terminal, notepad, file transfer, quick actions, host manager, settings, file preview) are windows. Phone/tablet/desktop are three responsive forms of the same system.
+"One OS": a single-user, desktop-style, cross-device, English-only server operations workbench. One Flask process serves a browser "OS" where each server is a desktop icon; features (terminal, notepad, file transfer, quick actions, host manager, settings, file preview) are windows, plus an AI assistant chat panel. Phone/tablet/desktop are three responsive forms of the same system.
 
 Hard constraints (from IDEA.md §1):
 
@@ -60,7 +60,10 @@ Backend (single Flask process + background threads):
 - `app/hosts.py`, `app/actions.py`, `app/attention_rules.py` — REST CRUD for their tables.
 - `app/attention.py` — waiting-input heuristic engine (runs inside reader threads).
 - `app/monitor.py` — 30 s TCP probe thread → `host_status` push.
-- `app/cleanup.py` — hourly: storage files >24 h, preview cache >24 h.
+- `app/cleanup.py` — hourly: storage files >24 h, preview cache >24 h, op-history pruning per `history_days`.
+- `app/ai.py` — OpenAI-compatible chat proxy (stdlib urllib, no new deps); injects a 7-day operation-history digest as context.
+- `app/history.py` — append-only operation log (`op_history` table) + digest builder; `record()` never raises.
+- `app/limits.py` — max single-file / storage-quota checks (settings `max_single_file_mb`, `max_storage_mb`).
 - `app/files.py` — transfer staging + 3 modes (A disk-relay, B streaming, C source-side scp), queue + progress.
 - `app/files_browser.py` — local/remote directory listing + file ops.
 - `app/preview.py` — `/api/preview` dispatch by extension; LibreOffice→PDF with sha256 cache.
@@ -69,7 +72,7 @@ Backend (single Flask process + background threads):
 Frontend (vanilla JS, no build step):
 
 - `templates/` — `base.html`, `login.html`, `desktop.html`; `templates/windows/*.html` are window fragments included as `<template>` elements and cloned per window by JS.
-- `static/js/` — `layout.js` (form detection), `desktop.js` (window manager, icons, taskbar, host manager UI), `terminal.js`, `keyboard.js`, `notepad.js`, `files.js`, `transfer.js`, `preview.js`, `actions.js`, `settings.js`.
+- `static/js/` — `layout.js` (form detection), `desktop.js` (window manager, icons, taskbar, host manager UI), `terminal.js`, `keyboard.js`, `notepad.js`, `files.js`, `transfer.js`, `preview.js`, `actions.js`, `settings.js`, `theme.js` (theme registry + xterm palettes), `chat.js` (AI assistant panel).
 - `static/css/` — `main.css` (desktop), `mobile.css` (phone/tablet), `keyboard.css`.
 - Vendored from CDN in `base.html`: socket.io, xterm.js + fit addon, PDF.js, marked, DOMPurify.
 
@@ -83,5 +86,9 @@ SocketIO event names and REST API contracts are listed in PLAN.md §Contracts �
 - Quick-action parameters: strict whitelist (regex `pattern` or `options` enum) on BOTH frontend and backend; templates only get validated placeholder values.
 - Attention rules: regex compiled with LRU cache, input truncated to last 2048 chars, ≤200 rules, builtin rules cannot be deleted (only disabled/copied), sample test runs with a timeout.
 - Window geometry per window type persists in `localStorage`; notepad content persists in `localStorage`.
-- Visual language: bg `#1e1e2e`, window `#2a2a3c`, accent `#4fc3f7`, attention orange `#ff9800`, radius 8px, transitions 150–200ms; touch targets ≥44×44px; terminal font "JetBrains Mono", UI font Inter/Segoe UI stack. Title Case for titles/buttons, Sentence case for status text.
+- **Icons are always inline SVG** via `OS.icon(name)` / `OS.iconSvg(name)` (library in `static/js/core.js`) — never emoji or unicode glyph icons. Exception: virtual-keyboard key-cap labels (arrows, Cmd/Win) are text because they label physical keys.
+- **Color themes**: every color goes through the CSS custom properties in `static/css/main.css`; `:root` is the default "Midnight" palette and classic themes (Dracula, Nord, Tokyo Night, Solarized Dark/Light, Gruvbox, Daylight) override via `html[data-theme="…"]`. Registry + persistence (`os-theme` key, applied pre-paint by a snippet in `base.html`) live in `static/js/theme.js`; terminals follow via `OS.theme.xtermTheme()`. Derived tints use `color-mix()` on the base variables.
+- **AI assistant**: config in Settings (OpenAI-compatible `ai_base_url`/`ai_model`/`ai_api_key`, key Fernet-encrypted per boot like host passwords); backend proxy `POST /api/ai/chat` (never expose the key to the client); chat panel is `#ai-panel` (`static/js/chat.js`).
+- **Limits**: `app/limits.py` enforces the single-file cap on transfers/uploads/remote preview fetches and the storage quota on anything landing in `storage/`; operation history is pruned hourly per `history_days`.
+- Visual language: Midnight theme (default) bg `#1e1e2e`, window `#2a2a3c`, accent `#4fc3f7`, attention orange `#ff9800`; radius 8px, transitions 150–200ms; touch targets ≥44×44px; terminal font "JetBrains Mono", UI font Inter/Segoe UI stack. Title Case for titles/buttons, Sentence case for status text.
 - Time format `YYYY-MM-DD HH:mm:ss`; relative time in English ("3 minutes ago").

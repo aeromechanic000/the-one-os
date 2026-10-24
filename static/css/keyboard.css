@@ -14,9 +14,9 @@
   font-family: var(--mono); font-size: 13px; flex: 0 0 auto;
   transition: background 120ms ease;
 }
-.vk-key:active, .vk-key.pressed { background: var(--accent); color: #10222c; }
+.vk-key:active, .vk-key.pressed { background: var(--accent); color: var(--accent-ink); }
 .vk-key.locked {
-  background: var(--attention); color: #241500; font-weight: 700;
+  background: var(--attention); color: var(--attention-ink); font-weight: 700;
   border-color: var(--attention);
 }
 .vk-key.mod { font-weight: 700; }
@@ -45,7 +45,7 @@
 
 .vk-mod-hint {
   position: absolute; top: 6px; right: 10px; z-index: 20;
-  background: rgba(79, 195, 247, 0.18); border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent); border: 1px solid var(--accent);
   color: var(--accent); font-size: 11px; padding: 2px 8px; border-radius: 6px;
   pointer-events: none;
 }

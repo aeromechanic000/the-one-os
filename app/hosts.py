@@ -5,7 +5,7 @@ restart they cannot be decrypted and the UI asks for re-entry.
 """
 from flask import Blueprint, jsonify, request
 
-from app import db, monitor
+from app import db, history, monitor
 from app.i18n import t
 from app.ssh_manager import manager
 from config import FERNET
@@ -96,6 +96,8 @@ def create_host():
         {**clean, "enc": enc},
     )
     monitor.hosts_changed()
+    history.record("host_add", clean["name"],
+                   "added host %s (%s)" % (clean["name"], clean["host"]))
     return jsonify({"id": rid}), 201
 
 
@@ -126,6 +128,7 @@ def update_host(host_id):
     manager.drop_host(host_id)  # pooled connection may be stale now
     monitor.drop_host(host_id)
     monitor.hosts_changed()
+    history.record("host_update", clean["name"], "updated host %s" % clean["name"])
     return jsonify({"ok": True})
 
 
@@ -138,4 +141,5 @@ def delete_host(host_id):
     monitor.drop_host(host_id)
     db.execute("DELETE FROM hosts WHERE id = ?", (host_id,))
     monitor.hosts_changed()
+    history.record("host_delete", row["name"], "deleted host %s" % row["name"])
     return jsonify({"ok": True})

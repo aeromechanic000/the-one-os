@@ -29,10 +29,120 @@
       });
     });
 
+    initThemePane(win);
     initInputPane(win);
     initRulesPane(win);
     initOfficePane(win);
+    initAiPane(win);
+    initLimitsPane(win);
   };
+
+  // ================= Appearance (themes) =================
+  function initThemePane(win) {
+    var grid = OS.$('#theme-grid', win.body);
+    if (!grid) return;
+
+    function render() {
+      grid.innerHTML = '';
+      var current = OS.theme.get();
+      OS.theme.THEMES.forEach(function (th) {
+        var card = OS.el('button',
+          'theme-card' + (th.id === current ? ' active' : ''));
+        card.type = 'button';
+        var swatch = OS.el('span', 'theme-swatch');
+        (OS.theme.SWATCH[th.id] || []).forEach(function (color) {
+          var dot = OS.el('span', 'theme-dot');
+          dot.style.background = color;
+          swatch.appendChild(dot);
+        });
+        card.appendChild(swatch);
+        card.appendChild(OS.el('span', 'theme-name', OS.t(th.nameKey)));
+        card.addEventListener('click', function () {
+          OS.theme.apply(th.id);
+          render();
+        });
+        grid.appendChild(card);
+      });
+    }
+    render();
+  }
+
+  // ================= AI Assistant =================
+  function initAiPane(win) {
+    var pane = OS.$('[data-pane="ai"]', win.body);
+    var baseUrl = OS.$('.ai-base-url', pane);
+    var model = OS.$('.ai-model', pane);
+    var apiKey = OS.$('.ai-api-key', pane);
+    var keyState = OS.$('.ai-key-state', pane);
+
+    OS.api('/api/settings').then(function (s) {
+      baseUrl.value = s.ai_base_url || '';
+      model.value = s.ai_model || '';
+      if (s.ai_api_key_needs_reentry) {
+        keyState.textContent = OS.t('ai_api_key_reenter');
+        keyState.classList.add('attention-text');
+      } else if (s.ai_api_key_set) {
+        keyState.textContent = OS.t('ai_api_key_stored');
+      }
+    });
+    OS.$('.ai-save', pane).addEventListener('click', function () {
+      var body = {
+        ai_base_url: baseUrl.value.trim(),
+        ai_model: model.value.trim()
+      };
+      if (apiKey.value.trim()) body.ai_api_key = apiKey.value.trim();
+      OS.api('/api/settings', {method: 'PUT', body: body}).then(function (res) {
+        if (res.error) { OS.toast(res.error, true); return; }
+        apiKey.value = '';
+        if (res.ai_api_key_needs_reentry) {
+          keyState.textContent = OS.t('ai_api_key_reenter');
+        } else if (res.ai_api_key_set) {
+          keyState.textContent = OS.t('ai_api_key_stored');
+        } else {
+          keyState.textContent = OS.t('ai_api_key_optional');
+        }
+        keyState.classList.toggle('attention-text', !!res.ai_api_key_needs_reentry);
+        OS.toast(OS.t('ss_saved'));
+      });
+    });
+  }
+
+  // ================= Limits & History =================
+  function initLimitsPane(win) {
+    var pane = OS.$('[data-pane="limits"]', win.body);
+    var single = OS.$('.lim-single', pane);
+    var storage = OS.$('.lim-storage', pane);
+    var history = OS.$('.lim-history', pane);
+    var used = OS.$('.lim-used', pane);
+
+    function load() {
+      OS.api('/api/settings').then(function (s) {
+        single.value = s.max_single_file_mb;
+        storage.value = s.max_storage_mb;
+        history.value = s.history_days;
+      });
+      OS.api('/api/files/local').then(function (listing) {
+        var total = 0;
+        (listing.entries || []).forEach(function (e) {
+          if (e.type === 'file') total += e.size || 0;
+        });
+        used.textContent = OS.t('lim_saved_quota', {
+          used: OS.fmtSize(total), total: storage.value + ' MB'});
+      });
+    }
+    load();
+    OS.$('.lim-save', pane).addEventListener('click', function () {
+      OS.api('/api/settings', {method: 'PUT', body: {
+        max_single_file_mb: parseInt(single.value, 10) || 512,
+        max_storage_mb: parseInt(storage.value, 10) || 2048,
+        history_days: parseInt(history.value, 10) || 90
+      }}).then(function (res) {
+        if (res.error) { OS.toast(res.error, true); return; }
+        OS.toast(OS.t('ss_saved'));
+        load();
+      });
+    });
+  }
 
   // ================= Input & Keyboard =================
   function initInputPane(win) {
@@ -102,7 +212,8 @@
         var seq = OS.el('input');
         seq.value = ck.sequence;
         seq.placeholder = OS.t('kb_sequence_hint');
-        var del = OS.el('button', 'btn btn-sm btn-danger', '✕');
+        var del = OS.el('button', 'btn btn-sm btn-danger');
+        del.appendChild(OS.icon('close'));
         del.addEventListener('click', function () {
           OS.kb.settings.customKeys.splice(idx, 1);
           save({custom_keys: OS.kb.settings.customKeys});
@@ -255,7 +366,8 @@
             inp2.addEventListener('input', function () { p.values = inp2.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean); });
             row.appendChild(inp2);
           }
-          var del = OS.el('button', 'btn btn-sm', '✕');
+          var del = OS.el('button', 'btn btn-sm');
+          del.appendChild(OS.icon('close'));
           del.addEventListener('click', function () {
             patterns.splice(idx, 1);
             renderFeatures();

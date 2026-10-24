@@ -7,7 +7,7 @@ Placeholders: ``t('topbar_online', n=3, t=5)``. No runtime language switch
 
 EN = {
     # --- global / common -----------------------------------------------------
-    "app_title": "Web OS",
+    "app_title": "One OS",
     "ok": "OK",
     "error": "Error",
     "loading": "Loading...",
@@ -28,7 +28,7 @@ EN = {
     "no_hosts": "No hosts yet. Add one in Host Manager.",
 
     # --- login ----------------------------------------------------------------
-    "login_title": "Web OS Login",
+    "login_title": "One OS Login",
     "login_password": "Password",
     "login_button": "Sign in",
     "login_hint": "Password is printed in the server console at startup. Restart the service if you forgot it.",
@@ -203,6 +203,51 @@ EN = {
     "confidence_medium": "medium",
     "confidence_low": "low",
     "builtin_no_delete": "Built-in rules cannot be deleted, only disabled",
+
+    # --- appearance / themes ------------------------------------------------------------
+    "sec_theme": "Appearance",
+    "theme_title": "Color Theme",
+    "theme_midnight": "Midnight",
+    "theme_dracula": "Dracula",
+    "theme_nord": "Nord",
+    "theme_tokyo": "Tokyo Night",
+    "theme_solar_dark": "Solarized Dark",
+    "theme_gruvbox": "Gruvbox Dark",
+    "theme_solar_light": "Solarized Light",
+    "theme_daylight": "Daylight",
+
+    # --- AI assistant --------------------------------------------------------------------
+    "sec_ai": "AI Assistant",
+    "ai_title": "AI Assistant",
+    "ai_base_url": "API Base URL",
+    "ai_base_url_hint": "OpenAI-compatible endpoint, e.g. https://api.openai.com/v1",
+    "ai_model": "Model",
+    "ai_model_hint": "Model ID, e.g. gpt-4o-mini",
+    "ai_api_key": "API Key",
+    "ai_api_key_optional": "Optional — leave empty for local services without auth",
+    "ai_api_key_stored": "API key stored. Leave empty to keep the current one.",
+    "ai_api_key_reenter": "The stored API key cannot be decrypted after restart — re-enter it.",
+    "ai_save": "Save AI Config",
+    "ai_not_configured": "AI assistant is not configured. Set the base URL and model in Settings.",
+    "ai_key_needs_reentry": "The stored API key cannot be decrypted after restart. Re-enter it in Settings.",
+    "ai_upstream_error": "AI service error: {msg}",
+    "ai_connection_failed": "Could not reach the AI service: {msg}",
+    "ai_panel_title": "Assistant",
+    "ai_placeholder": "Ask about your servers or your recent work...",
+    "ai_thinking": "Thinking...",
+    "ai_clear_chat": "Clear Conversation",
+    "ai_hint_history": "The assistant can see your operation history for the last 7 days.",
+    "ai_open": "AI Assistant",
+
+    # --- limits & history ------------------------------------------------------------------
+    "sec_limits": "Limits & History",
+    "lim_single": "Max Single File Size (MB)",
+    "lim_storage": "File Browser Storage Quota (MB)",
+    "lim_history": "Operation History Retention (days)",
+    "lim_hint": "Limits apply to transfers, uploads and preview downloads.",
+    "lim_saved_quota": "Storage used: {used} of {total}",
+    "err_file_too_large": "\"{name}\" exceeds the single-file limit of {mb} MB.",
+    "err_storage_full": "Storage quota exceeded ({mb} MB). Delete old files in the file browser.",
 
     # --- virtual keyboard -----------------------------------------------------------------
     "kbk_expand": "Expand full keyboard",

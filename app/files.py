@@ -18,7 +18,7 @@ import uuid
 
 from flask import Blueprint, jsonify, request
 
-from app import db
+from app import db, history, limits
 from app.files_browser import safe_local_path, safe_remote_path, stage_file
 from app.sockets import emit
 from app.ssh_manager import SSHError, manager
@@ -86,6 +86,15 @@ def _start_worker():
 _finished = []  # most recent completed/failed tasks, for the UI queue view
 
 
+def _history_note(task):
+    src = history.host_label(task.src.get("host_id")) \
+        if task.src.get("kind") == "remote" else "local"
+    dst = history.host_label(task.dst.get("host_id")) \
+        if task.dst.get("kind") == "remote" else "local"
+    return "%s: %s -> %s, %.1f MB, mode %s" % (
+        task.name, src, dst, task.size / 1048576.0, task.mode)
+
+
 def _worker():
     while True:
         with _cond:
@@ -96,6 +105,11 @@ def _worker():
         try:
             _run(task)
             task.progress(state="completed", percent=100)
+            history.record(
+                "transfer",
+                history.host_label(task.src.get("host_id"))
+                if task.src.get("kind") == "remote" else "",
+                _history_note(task))
         except Exception as exc:  # noqa: BLE001 — report, never kill worker
             task.progress(state="failed", error=str(exc))
         with _cond:
@@ -133,6 +147,10 @@ def _size_of(ep):
 def _relay(task):
     src, dst = task.src, task.dst
     task.size = _size_of(src) or 0
+    limits.check_single(task.size, task.name)
+    # relay writes into storage/ unless it only reads from it (local → remote)
+    if src["kind"] == "remote" or dst["kind"] == "local":
+        limits.check_quota(task.size)
     last = [0.0]
 
     def cb(transferred, total):
@@ -211,6 +229,7 @@ def _direct(task):
     d_path, d_host = _remote(dst)
     task.size = manager.with_sftp(
         s_host, lambda sftp: sftp.stat(s_path).st_size) or 0
+    limits.check_single(task.size, task.name)
     client_s = manager.get_client(s_host)
     client_d = manager.get_client(d_host)
     sftp_s = client_s.open_sftp()
@@ -254,6 +273,10 @@ def _source_scp(task):
     for p in (s_path, d_path):
         if "'" in p:
             raise SSHError("quote character in path")
+    limits.check_single(
+        manager.with_sftp(
+            s_host, lambda sftp: sftp.stat(s_path).st_size) or 0,
+        os.path.basename(s_path))
     cmd = (f"scp -P {int(dhost_row['port'] or 22)} "
            f"'{s_path}' "
            f"'{dhost_row['username']}@{dhost_row['host']}:{d_path}'")

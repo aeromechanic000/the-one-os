@@ -14,7 +14,7 @@ STORAGE_DIR = os.path.join(BASE_DIR, "storage")
 CACHE_DIR = os.path.join(BASE_DIR, "cache")
 PREVIEW_CACHE_DIR = os.path.join(CACHE_DIR, "preview")
 REMOTE_CACHE_DIR = os.path.join(CACHE_DIR, "remote")
-DB_PATH = os.path.join(BASE_DIR, "webos.db")
+DB_PATH = os.environ.get("WEBOS_DB", os.path.join(BASE_DIR, "webos.db"))
 
 # --- sessions ---------------------------------------------------------------
 SESSION_MAX_AGE = 7 * 24 * 3600  # 7 days (IDEA.md §6.2)

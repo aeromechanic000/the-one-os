@@ -13,7 +13,7 @@ import time
 from flask import Blueprint, Response, jsonify, request, send_file
 from werkzeug.utils import secure_filename
 
-from app import db
+from app import db, history, limits
 from app.i18n import t
 from app.ssh_manager import SSHError, manager
 from config import STORAGE_DIR
@@ -193,6 +193,10 @@ def file_op():
         return jsonify({"error": str(exc)}), 502
     except OSError as exc:
         return jsonify({"error": str(exc)}), 400
+    history.record(
+        "file_op",
+        history.host_label(host_id) if target == "remote" else "",
+        "%s %s" % (op, posixpath.basename(path) or path))
     return jsonify({"ok": True})
 
 
@@ -224,11 +228,23 @@ def upload():
             if not os.path.isdir(dest_dir):
                 dest_dir = os.path.dirname(dest_dir)
             dest = os.path.join(dest_dir, name)
+            limits.check_single(request.content_length or 0, name)
+            limits.check_quota(request.content_length or 0)
             uploaded.save(dest)
+            try:  # exact check once the real size is known
+                limits.check_single(os.path.getsize(dest), name)
+                limits.check_quota(0)
+            except limits.LimitError:
+                try:
+                    os.remove(dest)
+                except OSError:
+                    pass
+                raise
             stage_file(dest, name, source_host="")
         else:
             if not host_id:
                 return jsonify({"error": "host_id is required"}), 400
+            limits.check_single(request.content_length or 0, name)
 
             def do(sftp):
                 rdir = safe_remote_path(rel_dir or ".")
@@ -237,8 +253,14 @@ def upload():
             manager.with_sftp(host_id, do)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
+    except limits.LimitError as exc:
+        return jsonify({"error": str(exc)}), 413
     except SSHError as exc:
         return jsonify({"error": str(exc)}), 502
+    history.record(
+        "upload",
+        history.host_label(host_id) if target != "local" else "",
+        "%s (%.1f MB)" % (name, (request.content_length or 0) / 1048576.0))
     return jsonify({"ok": True, "name": name})
 
 
@@ -292,6 +314,8 @@ def download():
         resp.headers["Content-Disposition"] = \
             f'attachment; filename="{posixpath.basename(rpath)}"'
         resp.headers["Content-Length"] = str(st.st_size)
+        history.record("download", history.host_label(host_id),
+                       posixpath.basename(rpath) or rpath)
         return resp
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400

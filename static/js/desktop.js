@@ -17,8 +17,8 @@
   OS.winClose = {};
 
   var WIN_ICONS = {
-    terminal: '&gt;_', notepad: '✎', files: '🗂', actions: '⚡',
-    hosts: '☶', settings: '⚙', preview: '◎'
+    terminal: 'terminal', notepad: 'edit', files: 'folder', actions: 'bolt',
+    hosts: 'server', settings: 'gear', preview: 'eye'
   };
   var SINGLETONS = {notepad: 1, files: 1, actions: 1, hosts: 1, settings: 1, preview: 1};
 
@@ -35,15 +35,15 @@
             e.target.closest('#phone-home')) return;
         e.preventDefault();
         OS.ctxMenu([
-          {icon: '✎', label: OS.t('ctx_new_note'),
+          {icon: 'edit', label: OS.t('ctx_new_note'),
            onClick: function () { wm.openApp('notepad'); }},
-          {icon: '🗂', label: OS.t('ctx_file_transfer'),
+          {icon: 'folder', label: OS.t('ctx_file_transfer'),
            onClick: function () { wm.openApp('files'); }},
-          {icon: '⚡', label: OS.t('ctx_quick_actions'),
+          {icon: 'bolt', label: OS.t('ctx_quick_actions'),
            onClick: function () { wm.openApp('actions'); }},
-          {icon: '☶', label: OS.t('ctx_host_manager'),
+          {icon: 'server', label: OS.t('ctx_host_manager'),
            onClick: function () { wm.openApp('hosts'); }},
-          {icon: '⚙', label: OS.t('ctx_system_settings'),
+          {icon: 'gear', label: OS.t('ctx_system_settings'),
            onClick: function () { wm.openApp('settings'); }}
         ], e.clientX, e.clientY);
       });
@@ -85,16 +85,20 @@
         el: OS.el('div', 'window')
       };
       var header = OS.el('div', 'win-header');
-      var backBtn = OS.el('button', 'win-btn phone-back-btn', '‹');
+      var backBtn = OS.el('button', 'win-btn phone-back-btn');
       backBtn.title = OS.t('back');
+      backBtn.appendChild(OS.icon('back'));
       var icon = OS.el('span', 'win-icon');
-      icon.innerHTML = WIN_ICONS[type] || '';
+      icon.innerHTML = OS.iconSvg(WIN_ICONS[type] || '');
       var title = OS.el('span', 'win-title', opts.title || type);
       var badge = OS.el('span', 'win-attention-badge');
       badge.hidden = true;
-      var minBtn = OS.el('button', 'win-btn', '–');
-      var maxBtn = OS.el('button', 'win-btn', '□');
-      var closeBtn = OS.el('button', 'win-btn close', '✕');
+      var minBtn = OS.el('button', 'win-btn');
+      minBtn.appendChild(OS.icon('min'));
+      var maxBtn = OS.el('button', 'win-btn');
+      maxBtn.appendChild(OS.icon('max'));
+      var closeBtn = OS.el('button', 'win-btn close');
+      closeBtn.appendChild(OS.icon('close'));
       header.appendChild(backBtn);
       header.appendChild(icon);
       header.appendChild(title);
@@ -377,14 +381,16 @@
     var menu = OS.$('#start-menu');
     menu.innerHTML = '';
     [
-      {icon: '✎', label: OS.t('ctx_new_note'), type: 'notepad'},
-      {icon: '🗂', label: OS.t('ctx_file_transfer'), type: 'files'},
-      {icon: '⚡', label: OS.t('ctx_quick_actions'), type: 'actions'},
-      {icon: '☶', label: OS.t('ctx_host_manager'), type: 'hosts'},
-      {icon: '⚙', label: OS.t('ctx_system_settings'), type: 'settings'}
+      {icon: 'edit', label: OS.t('ctx_new_note'), type: 'notepad'},
+      {icon: 'folder', label: OS.t('ctx_file_transfer'), type: 'files'},
+      {icon: 'bolt', label: OS.t('ctx_quick_actions'), type: 'actions'},
+      {icon: 'server', label: OS.t('ctx_host_manager'), type: 'hosts'},
+      {icon: 'gear', label: OS.t('ctx_system_settings'), type: 'settings'}
     ].forEach(function (item) {
       var btn = OS.el('button', 'menu-item');
-      btn.appendChild(OS.el('span', 'mi-icon', item.icon));
+      var mi = OS.el('span', 'mi-icon');
+      mi.innerHTML = OS.iconSvg(item.icon);
+      btn.appendChild(mi);
       btn.appendChild(OS.el('span', '', item.label));
       btn.addEventListener('click', function () {
         menu.hidden = true;
@@ -450,7 +456,9 @@
     }
     sessions.forEach(function (s) {
       var btn = OS.el('button', 'menu-item');
-      btn.appendChild(OS.el('span', 'mi-icon', '›'));
+      var mi = OS.el('span', 'mi-icon');
+      mi.innerHTML = OS.iconSvg('chevron');
+      btn.appendChild(mi);
       var col = OS.el('div');
       col.appendChild(OS.el('div', '', s.label));
       col.appendChild(OS.el('div', '', OS.el('span', '', s.sub)));
@@ -490,7 +498,8 @@
     OS.state.hosts.forEach(function (host) {
       // desktop icon
       var icon = OS.el('button', 'desktop-icon');
-      var glyph = OS.el('div', 'host-icon-glyph', '⌘');
+      var glyph = OS.el('div', 'host-icon-glyph');
+      glyph.appendChild(OS.icon('server'));
       var dot = OS.el('span', statusClass(host.id));
       glyph.appendChild(dot);
       icon.appendChild(glyph);
@@ -505,7 +514,8 @@
 
       // phone card
       var card = OS.el('button', 'phone-host-card');
-      var cg = OS.el('div', 'host-icon-glyph', '⌘');
+      var cg = OS.el('div', 'host-icon-glyph');
+      cg.appendChild(OS.icon('server'));
       cg.appendChild(OS.el('span', statusClass(host.id)));
       var meta = OS.el('div', 'phone-host-meta');
       meta.appendChild(OS.el('div', 'phone-host-name', host.name));
@@ -536,14 +546,14 @@
 
   function hostMenu(host, x, y) {
     OS.ctxMenu([
-      {icon: '>_', label: OS.t('ctx_open_terminal'),
+      {icon: 'terminal', label: OS.t('ctx_open_terminal'),
        onClick: function () { OS.term.open(host.id); }},
-      {icon: '🗂', label: OS.t('ctx_browse_files'),
+      {icon: 'folder', label: OS.t('ctx_browse_files'),
        onClick: function () { OS.files.open({hostId: host.id}); }},
       '-',
-      {icon: '✎', label: OS.t('ctx_edit_host'),
+      {icon: 'edit', label: OS.t('ctx_edit_host'),
        onClick: function () { openHostManager(host.id); }},
-      {icon: '✕', label: OS.t('ctx_delete_host'), danger: true,
+      {icon: 'close', label: OS.t('ctx_delete_host'), danger: true,
        onClick: function () {
          OS.confirm(OS.t('hm_confirm_delete', {name: host.name}), true)
            .then(function (yes) {

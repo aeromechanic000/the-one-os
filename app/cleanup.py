@@ -7,7 +7,7 @@ import os
 import threading
 import time
 
-from app import db
+from app import db, history
 from config import (CLEANUP_INTERVAL, PREVIEW_CACHE_DIR, PREVIEW_CACHE_TTL,
                     REMOTE_CACHE_DIR, REMOTE_CACHE_TTL, STORAGE_DIR,
                     TRANSFER_TTL)
@@ -59,11 +59,24 @@ def _cleanup_dir(directory, ttl):
             pass
 
 
+def _cleanup_history():
+    """Prune operation history older than the history_days setting."""
+    try:
+        days = int(db.get_setting("history_days", "90") or "90")
+    except ValueError:
+        days = 90
+    try:
+        history.prune(days)
+    except Exception:
+        pass
+
+
 def run_once():
     now = time.time()
     _cleanup_staged(now)
     _cleanup_dir(PREVIEW_CACHE_DIR, PREVIEW_CACHE_TTL)
     _cleanup_dir(REMOTE_CACHE_DIR, REMOTE_CACHE_TTL)
+    _cleanup_history()
 
 
 def _loop():

@@ -1,12 +1,22 @@
 <template id="tpl-settings">
   <div class="settings-wrap">
     <div class="settings-tabs">
-      <button data-tab="input" class="active">{{ t('sec_input') }}</button>
+      <button data-tab="theme" class="active">{{ t('sec_theme') }}</button>
+      <button data-tab="input">{{ t('sec_input') }}</button>
       <button data-tab="rules">{{ t('sec_attention') }}</button>
       <button data-tab="office">{{ t('sec_office') }}</button>
+      <button data-tab="ai">{{ t('sec_ai') }}</button>
+      <button data-tab="limits">{{ t('sec_limits') }}</button>
     </div>
     <div class="settings-body">
-      <section data-pane="input">
+      <section data-pane="theme">
+        <div class="settings-section">
+          <h3>{{ t('theme_title') }}</h3>
+          <div class="theme-grid" id="theme-grid"></div>
+        </div>
+      </section>
+
+      <section data-pane="input" hidden>
         <div class="settings-section">
           <h3>{{ t('kb_mode') }}</h3>
           <div class="radio-row kb-mode-row">
@@ -67,6 +77,37 @@
             <button class="radio-pill" data-v="disabled">{{ t('op_disabled') }}</button>
           </div>
           <p class="office-status" style="color: var(--text-dim); font-size: 12px"></p>
+        </div>
+      </section>
+
+      <section data-pane="ai" hidden>
+        <div class="settings-section">
+          <h3>{{ t('ai_title') }}</h3>
+          <label class="field-label">{{ t('ai_base_url') }}</label>
+          <input type="text" class="ai-base-url" placeholder="https://api.openai.com/v1">
+          <div class="settings-hint">{{ t('ai_base_url_hint') }}</div>
+          <label class="field-label">{{ t('ai_model') }}</label>
+          <input type="text" class="ai-model" placeholder="gpt-4o-mini">
+          <div class="settings-hint">{{ t('ai_model_hint') }}</div>
+          <label class="field-label">{{ t('ai_api_key') }}</label>
+          <input type="password" class="ai-api-key" autocomplete="new-password">
+          <div class="settings-hint ai-key-state">{{ t('ai_api_key_optional') }}</div>
+          <button class="btn btn-primary ai-save" style="margin-top: 10px">{{ t('ai_save') }}</button>
+        </div>
+      </section>
+
+      <section data-pane="limits" hidden>
+        <div class="settings-section">
+          <h3>{{ t('sec_limits') }}</h3>
+          <label class="field-label">{{ t('lim_single') }}</label>
+          <input type="number" class="lim-single" min="1" max="102400" step="1">
+          <label class="field-label">{{ t('lim_storage') }}</label>
+          <input type="number" class="lim-storage" min="1" max="102400" step="1">
+          <p class="settings-hint lim-used"></p>
+          <label class="field-label">{{ t('lim_history') }}</label>
+          <input type="number" class="lim-history" min="1" max="3650" step="1">
+          <div class="settings-hint">{{ t('lim_hint') }}</div>
+          <button class="btn btn-primary lim-save" style="margin-top: 10px">{{ t('save') }}</button>
         </div>
       </section>
     </div>

@@ -19,7 +19,7 @@ import zipfile
 
 from flask import Blueprint, Response, jsonify, request
 
-from app import db
+from app import db, history, limits
 from app.files_browser import safe_local_path, safe_remote_path
 from app.i18n import t
 from app.ssh_manager import SSHError, manager
@@ -126,6 +126,7 @@ def _fetch_remote(host_id, rpath, st, force=False):
         return cache
     if st.st_size > REMOTE_CACHE_LIMIT:
         raise SSHError("file too large to cache")
+    limits.check_single(st.st_size, os.path.basename(rpath) or rpath)
     tmp = cache + ".part"
 
     def do(sftp):
@@ -355,6 +356,9 @@ def preview():
                 return _json_payload({"error": t("not_found")}), 404
             name = os.path.basename(full)
             kind, ext = classify(name)
+            if kind in ("image", "audio", "video", "pdf", "archive", "office"):
+                limits.check_single(os.path.getsize(full), name)
+            history.record("preview", "", "previewed %s (%s)" % (name, kind))
             if kind in ("image", "audio", "video", "pdf"):
                 return _serve_local_media(full, kind, ext, name)
             if kind in ("text", "markdown"):
@@ -373,6 +377,8 @@ def preview():
         rpath = safe_remote_path(path)
         name = os.path.basename(rpath) or rpath
         kind, ext = classify(name)
+        history.record("preview", history.host_label(host_id),
+                       "previewed %s (%s)" % (name, kind))
 
         if kind in ("text", "markdown"):
             def read_text(sftp):
@@ -422,6 +428,8 @@ def preview():
              "hint": t("pv_unsupported_hint")}, status=415)
     except ValueError as exc:
         return _json_payload({"error": str(exc)}), 400
+    except limits.LimitError as exc:
+        return _json_payload({"error": str(exc)}), 413
     except SSHError as exc:
         return _json_payload({"error": str(exc)}), 502
 

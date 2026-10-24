@@ -87,6 +87,18 @@ SCHEMA = [
         value TEXT NOT NULL DEFAULT ''
     )
     """,
+    # op_history: append-only operation log; the AI assistant reads a digest
+    # of recent rows, cleanup.py prunes by the history_days setting.
+    """
+    CREATE TABLE IF NOT EXISTS op_history (
+        id     INTEGER PRIMARY KEY AUTOINCREMENT,
+        ts     TEXT NOT NULL DEFAULT (datetime('now')),
+        type   TEXT NOT NULL,
+        host   TEXT NOT NULL DEFAULT '',
+        detail TEXT NOT NULL DEFAULT ''
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_op_history_ts ON op_history(ts)",
 ]
 
 

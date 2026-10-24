@@ -23,6 +23,7 @@
     OS.transfer.init();
     OS.kb.initHardwareDetection();
     OS.desktop.init();   // includes initSocketHandlers + refreshHosts
+    OS.chat.init();
 
     // settings first (keyboard mode etc.), then re-attach live terminals
     OS.kb.loadSettings().then(function () {
