@@ -77,6 +77,11 @@ def run_once():
     _cleanup_dir(PREVIEW_CACHE_DIR, PREVIEW_CACHE_TTL)
     _cleanup_dir(REMOTE_CACHE_DIR, REMOTE_CACHE_TTL)
     _cleanup_history()
+    try:
+        from app import locality
+        locality.maintain()  # public-IP refresh; re-mark hosts on change
+    except Exception:
+        pass
 
 
 def _loop():

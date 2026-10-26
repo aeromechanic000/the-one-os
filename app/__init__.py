@@ -77,7 +77,8 @@ def start_background():
     if _background_started:
         return
     _background_started = True
-    from app import cleanup, files, monitor
+    from app import cleanup, files, locality, monitor
     monitor.start()
     cleanup.start()
     files.start_worker()
+    locality.recheck_all_async()  # re-mark hosts pointing at this machine

@@ -64,6 +64,7 @@ Backend (single Flask process + background threads):
 - `app/ai.py` — OpenAI-compatible chat proxy (stdlib urllib, no new deps); injects a 7-day operation-history digest as context.
 - `app/history.py` — append-only operation log (`op_history` table) + digest builder; `record()` never raises.
 - `app/limits.py` — max single-file / storage-quota checks (settings `max_single_file_mb`, `max_storage_mb`).
+- `app/locality.py` — detects hosts that point at this machine (loopback/interface/hostname/public IP); sets `hosts.is_local` in background threads (boot recheck, on add/update, hourly) — never blocks a request.
 - `app/files.py` — transfer staging + 3 modes (A disk-relay, B streaming, C source-side scp), queue + progress.
 - `app/files_browser.py` — local/remote directory listing + file ops.
 - `app/preview.py` — `/api/preview` dispatch by extension; LibreOffice→PDF with sha256 cache.

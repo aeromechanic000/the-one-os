@@ -25,6 +25,8 @@ SCHEMA = [
         key_path           TEXT DEFAULT '',
         password_encrypted TEXT DEFAULT '',
         group_name         TEXT DEFAULT '',
+        is_local           INTEGER NOT NULL DEFAULT 0
+                           CHECK (is_local IN (0, 1)),
         created_at         TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
     )
@@ -117,6 +119,11 @@ def init_db():
         conn = get_conn()
         for stmt in SCHEMA:
             conn.execute(stmt)
+        # lightweight one-time migrations (no framework — keep explicit)
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(hosts)")}
+        if "is_local" not in cols:
+            conn.execute("ALTER TABLE hosts "
+                         "ADD COLUMN is_local INTEGER NOT NULL DEFAULT 0")
         conn.commit()
 
 

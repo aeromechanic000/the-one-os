@@ -149,6 +149,7 @@ EN = {
     "auth_password": "Password",
     "auth_key": "Key File",
     "hm_saved": "Saved",
+    "hm_local": "Local",
     "hm_needs_password": "Password re-entry needed after restart",
     "status_online": "Online",
     "status_offline": "Offline",

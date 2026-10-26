@@ -31,7 +31,10 @@ remote→local transfer, path-traversal rejection). Run book: README §Testing.
 GET/POST /auth/login            POST {password}; GET /auth/logout
 GET     /api/session            → {login_at, expires_at, remaining_seconds}
 GET     /api/terminals          → [{sid, host_id, name, state, attention}]
-GET/POST/PUT/DELETE /api/hosts[/<id>]
+GET/POST/PUT/DELETE /api/hosts[/<id>]   GET → includes `online` + `local` flags
+                                (`local`: entry points at this machine —
+                                loopback/interface address/hostname/public IP;
+                                recomputed at boot, on change, and hourly)
 GET/POST/PUT/DELETE /api/actions[/<id>]
 POST    /api/actions/<id>/run   {params} → {output, exit_status} | 400 {error, field}
 GET     /api/transfer/files     → staged files in storage/

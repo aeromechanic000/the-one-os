@@ -544,7 +544,12 @@
       cg.appendChild(OS.icon('server'));
       cg.appendChild(OS.el('span', statusClass(host.id)));
       var meta = OS.el('div', 'phone-host-meta');
-      meta.appendChild(OS.el('div', 'phone-host-name', host.name));
+      var nameRow = OS.el('div', 'phone-host-name');
+      nameRow.appendChild(document.createTextNode(host.name));
+      if (host.local) {
+        nameRow.appendChild(OS.el('span', 'local-chip', OS.t('hm_local')));
+      }
+      meta.appendChild(nameRow);
       meta.appendChild(OS.el('div', 'phone-host-sub',
         host.username + '@' + host.host + ':' + host.port));
       var att = OS.el('div', 'phone-host-attention');
@@ -671,6 +676,9 @@
       var dot = OS.el('span', 'host-status-dot ' + statusClass(host.id));
       tdName.appendChild(dot);
       tdName.appendChild(document.createTextNode(host.name));
+      if (host.local) {
+        tdName.appendChild(OS.el('span', 'local-chip', OS.t('hm_local')));
+      }
       tr.appendChild(tdName);
       tr.appendChild(OS.el('td', 'mono', host.host + ':' + host.port));
       tr.appendChild(OS.el('td', '', host.username));
