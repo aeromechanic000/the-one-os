@@ -279,6 +279,28 @@ button.tb-chip:hover { background: var(--win-2); color: var(--text); }
 .toast.error { border-left-color: var(--bad); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(6px); } }
 
+/* ---------- single-active-frontend sleep overlay ----------
+   Sits above windows, menus and modals (toasts stay on top so wake
+   feedback is visible); only the sleep card is reachable. */
+#sleep-layer {
+  position: fixed; inset: 0; z-index: 970;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+}
+#sleep-layer[hidden] { display: none; }
+.sleep-card {
+  background: var(--win); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 26px 30px; max-width: 420px; margin: 16px; text-align: center;
+}
+.sleep-card h2 { margin: 0 0 8px; font-size: 17px; }
+.sleep-card p { color: var(--text-dim); font-size: 13px; margin: 0 0 4px; }
+.sleep-row { font-size: 13px; margin: 6px 0; color: var(--text); }
+.sleep-row.mono { font-family: var(--mono); }
+#sleep-wake { margin-top: 14px; min-height: 44px; min-width: 140px; }
+.sleep-hint { margin-top: 12px; font-size: 12px; }
+
 /* ---------- terminal window ---------- */
 .term-wrap { display: flex; flex-direction: column; height: 100%; }
 .term-screen { flex: 1 1 auto; min-height: 0; padding: 4px; background: var(--console); }

@@ -24,6 +24,7 @@
     OS.kb.initHardwareDetection();
     OS.desktop.init();   // includes initSocketHandlers + refreshHosts
     OS.chat.init();
+    OS.activation.init();   // sleep overlay + wake-up (single active frontend)
 
     // settings first (keyboard mode etc.), then re-attach live terminals
     OS.kb.loadSettings().then(function () {

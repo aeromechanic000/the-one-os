@@ -5,11 +5,12 @@ eventlet/gevent cannot go. Every emit is a broadcast — the system has a
 single user, and mirroring all terminals to every open tab/phone is a
 feature, not a leak.
 """
-from flask import session
+from flask import request, session
 from flask_socketio import ConnectionRefusedError, SocketIO
 
-from app import auth
+from app import activation, auth
 from app import ssh_manager
+from app.i18n import t
 
 socketio = None
 
@@ -23,6 +24,18 @@ def emit(event, data):
             pass
 
 
+def _client_active():
+    """Is the socket's frontend the active one? Sleeping frontends keep
+    receiving mirrors but cannot drive terminals."""
+    return activation.is_active(session.get("client_id"))
+
+
+def _send_activation_state(sid):
+    client_id, addr = auth.ensure_client()
+    socketio.emit("activation_state",
+                  activation.state_for(client_id, addr), to=sid)
+
+
 def init_socketio(app):
     global socketio
     socketio = SocketIO(app, async_mode="threading", cors_allowed_origins="*")
@@ -31,9 +44,14 @@ def init_socketio(app):
     def on_connect():
         if not auth.session_valid():
             raise ConnectionRefusedError("unauthorized")
+        # tell this socket right away whether its frontend is active
+        _send_activation_state(request.sid)
 
     @socketio.on("terminal_create")
     def on_terminal_create(data):
+        if not _client_active():
+            return {"ok": False, "error": "deactivated",
+                    "message": t("err_deactivated")}
         host_id = int(data.get("host_id", 0))
         cols = int(data.get("cols", 80) or 80)
         rows = int(data.get("rows", 24) or 24)
@@ -49,6 +67,8 @@ def init_socketio(app):
 
     @socketio.on("terminal_input")
     def on_terminal_input(data):
+        if not _client_active():
+            return
         sid = data.get("sid", "")
         text = data.get("data", "")
         if not sid or not isinstance(text, str):
@@ -60,6 +80,8 @@ def init_socketio(app):
 
     @socketio.on("terminal_resize")
     def on_terminal_resize(data):
+        if not _client_active():
+            return
         try:
             ssh_manager.manager.resize(
                 data.get("sid", ""),
@@ -71,6 +93,8 @@ def init_socketio(app):
 
     @socketio.on("terminal_close")
     def on_terminal_close(data):
+        if not _client_active():
+            return
         ssh_manager.manager.close(data.get("sid", ""))
 
     @socketio.on("terminal_attach")

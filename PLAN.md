@@ -29,8 +29,12 @@ remote→local transfer, path-traversal rejection). Run book: README §Testing.
 
 ```
 GET/POST /auth/login            POST {password}; GET /auth/logout
+                                (login makes this frontend the active one)
 GET     /api/session            → {login_at, expires_at, remaining_seconds}
 GET     /api/terminals          → [{sid, host_id, name, state, attention}]
+GET     /api/activation         → {client_id, active, your_ip, active_address,
+                                  activated_at}   (single-active-frontend state)
+POST    /api/activation/wake    → same; this frontend takes over as active
 GET/POST/PUT/DELETE /api/hosts[/<id>]   GET → includes `online` + `local` flags
                                 (`local`: entry points at this machine —
                                 loopback/interface address/hostname/public IP;
@@ -55,12 +59,18 @@ POST    /api/ai/chat            {messages:[{role,content}]} → {reply} | 400/50
                                 (OpenAI-compatible proxy; injects a 7-day
                                 operation-history digest as context)
 GET     /api/history            ?days=&limit= → [{ts,type,host,detail}]
+
+Single-active frontend: the latest login or wake is the only active client
+(memory-only state). Non-GET requests from other logged-in frontends get
+409 {error}; their socket events that mutate state (terminal_create/input/
+resize/close) are ignored, while reads and mirrors keep flowing so a
+sleeping frontend can wake and re-sync.
 ```
 
 ### SocketIO events
 
 Client→server: `terminal_create {host_id}` (ack `{sid}`), `terminal_input {sid,data}`, `terminal_resize {sid,cols,rows}`, `terminal_close {sid}`, `terminal_attach {sid}`, `latency_probe` (ack).
-Server→client: `terminal_output {sid,data}`, `terminal_meta {sid,host_id,name,state}`, `terminal_replay {sid,data}`, `terminal_closed {sid,reason}`, `session_attention {sid,name,confidence,hint}`, `session_attention_cleared {sid}`, `host_status {host_id,online}`, `hosts_changed`, `transfer_progress {id,state,percent,name,error}`.
+Server→client: `terminal_output {sid,data}`, `terminal_meta {sid,host_id,name,state}`, `terminal_replay {sid,data}`, `terminal_closed {sid,reason}`, `session_attention {sid,name,confidence,hint}`, `session_attention_cleared {sid}`, `host_status {host_id,online}`, `hosts_changed`, `transfer_progress {id,state,percent,name,error}`, `activation_changed {client_id,address,activated_at}` (broadcast on login/wake), `activation_state` (per-socket on connect; same shape as /api/activation).
 
 ### DB tables
 

@@ -54,12 +54,13 @@ Backend (single Flask process + background threads):
 - `app/__init__.py` — `create_app()` factory, DB init, background threads (monitor, cleanup).
 - `app/db.py` — sqlite helpers (thread-safe), schema init.
 - `app/i18n.py` — the English copy dictionary `EN` + `t(key, **kwargs)`.
-- `app/auth.py` — password check, `login_required`, `before_request` double validation (BOOT_ID + 7-day expiry).
+- `app/auth.py` — password check, `login_required`, `before_request` double validation (BOOT_ID + 7-day expiry), frontend identity (client_id/client_addr in the session).
 - `app/ssh_manager.py` — terminal channels (`{sid: TerminalSession}`), reader threads, pooled SSH/SFTP clients per host.
 - `app/sockets.py` — SocketIO events (`terminal_create/input/resize/close`, latency probe).
 - `app/hosts.py`, `app/actions.py`, `app/attention_rules.py` — REST CRUD for their tables.
 - `app/attention.py` — waiting-input heuristic engine (runs inside reader threads).
 - `app/monitor.py` — 30 s TCP probe thread → `host_status` push.
+- `app/activation.py` — single-active-frontend state (memory-only): latest login or `POST /api/activation/wake` is the only active client; other logged-in frontends get 409 on writes and their mutating socket events are ignored (reads/mirrors keep flowing so they can wake and re-sync).
 - `app/cleanup.py` — hourly: storage files >24 h, preview cache >24 h, op-history pruning per `history_days`.
 - `app/ai.py` — OpenAI-compatible chat proxy (stdlib urllib, no new deps); injects a 7-day operation-history digest as context.
 - `app/history.py` — append-only operation log (`op_history` table) + digest builder; `record()` never raises.
@@ -73,7 +74,7 @@ Backend (single Flask process + background threads):
 Frontend (vanilla JS, no build step):
 
 - `templates/` — `base.html`, `login.html`, `desktop.html`; `templates/windows/*.html` are window fragments included as `<template>` elements and cloned per window by JS.
-- `static/js/` — `layout.js` (form detection), `desktop.js` (window manager, icons, taskbar, host manager UI), `terminal.js`, `keyboard.js`, `notepad.js`, `files.js`, `transfer.js`, `preview.js`, `actions.js`, `settings.js`, `theme.js` (theme registry + xterm palettes), `chat.js` (AI assistant panel).
+- `static/js/` — `layout.js` (form detection), `desktop.js` (window manager, icons, taskbar, host manager UI), `terminal.js`, `keyboard.js`, `notepad.js`, `files.js`, `transfer.js`, `preview.js`, `actions.js`, `settings.js`, `theme.js` (theme registry + xterm palettes), `chat.js` (AI assistant panel), `activation.js` (sleep overlay + wake-up for non-active frontends).
 - `static/css/` — `main.css` (desktop), `mobile.css` (phone/tablet), `keyboard.css`.
 - Vendored from CDN in `base.html`: socket.io, xterm.js + fit addon, PDF.js, marked, DOMPurify.
 

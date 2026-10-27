@@ -6,7 +6,7 @@ import json
 from flask import Blueprint, jsonify, redirect, render_template, request, \
     session
 
-from app import ai, auth, db, history
+from app import activation, ai, auth, db, history
 from app import attention_rules
 from app.i18n import t
 from app.ssh_manager import manager
@@ -63,12 +63,16 @@ def login_post():
     if not auth.verify_password(data.get("password", "")):
         return jsonify({"error": t("login_invalid")}), 401
     auth.login_session()
-    history.record("login", "", "signed in")
+    # a fresh login takes over as the active frontend (IDEA.md single-user,
+    # multi-device: latest login wins, every other frontend falls asleep)
+    activation.register(session["client_id"], session["client_addr"])
+    history.record("login", "", "signed in from " + session["client_addr"])
     return jsonify({"ok": True})
 
 
 @bp.get("/auth/logout")
 def logout():
+    activation.clear(session.get("client_id"))
     auth.logout_session()
     return redirect("/auth/login")
 
@@ -78,6 +82,24 @@ def logout():
 @bp.get("/api/session")
 def session_info():
     return jsonify(auth.session_info())
+
+
+@bp.get("/api/activation")
+def activation_state():
+    """Who is the active frontend, and is it this one?"""
+    client_id, addr = auth.ensure_client()
+    return jsonify(activation.state_for(client_id, addr))
+
+
+@bp.post("/api/activation/wake")
+def activation_wake():
+    """Take over as the active frontend from a sleeping one."""
+    client_id, _addr = auth.ensure_client()
+    addr = session.get("client_addr") or auth.client_ip()
+    session["client_addr"] = addr
+    activation.register(client_id, addr)
+    history.record("wake", "", "frontend took over from " + addr)
+    return jsonify(activation.state_for(client_id, addr))
 
 
 @bp.get("/api/terminals")

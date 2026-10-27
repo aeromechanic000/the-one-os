@@ -3,8 +3,13 @@
 Single user, memory-only password, BOOT_ID + 7-day double validation in
 before_request. SECRET_KEY is random per boot, so old cookie signatures fail
 immediately after a restart.
+
+Every logged-in browser also carries a frontend identity (client_id +
+client_addr) used by app/activation.py to enforce the single-active-
+frontend rule: a deactivated frontend may read state but not change it.
 """
 import hmac
+import secrets
 import time
 
 from flask import jsonify, redirect, request, session
@@ -19,12 +24,33 @@ def verify_password(candidate):
     return hmac.compare_digest(candidate, PASSWORD)
 
 
+def client_ip():
+    """Address of the calling machine as this server sees it (a proxy hop
+    is honored so the top bar shows the real client behind e.g. nginx)."""
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.remote_addr or "unknown"
+
+
+def ensure_client():
+    """Give the session a frontend identity; cookies from before this
+    feature existed get one lazily (but are not made active)."""
+    if "client_id" not in session:
+        session["client_id"] = secrets.token_urlsafe(9)
+        session["client_addr"] = client_ip()
+    return session["client_id"], session.get("client_addr", "")
+
+
 def login_session():
-    """Mark the flask session as authenticated."""
+    """Mark the flask session as authenticated. A fresh login mints a new
+    frontend identity — logging in is also a takeover."""
     session.permanent = True
     session["boot_id"] = BOOT_ID
     session["login_at"] = time.time()
     session.permanent_lifetime = SESSION_MAX_AGE
+    session["client_id"] = secrets.token_urlsafe(9)
+    session["client_addr"] = client_ip()
 
 
 def logout_session():
@@ -59,4 +85,15 @@ def before_request_hook():
         if path.startswith("/api/") or path.startswith("/socket.io"):
             return jsonify({"error": t("session_expired")}), 401
         return redirect("/auth/login")
+    ensure_client()
+    # Single-active frontend: a deactivated client may still read (so its
+    # sleep card can render and its mirror stays current) but not mutate.
+    # /socket.io is exempt so its connection survives for wake pushes;
+    # state-changing socket events are guarded individually in sockets.py.
+    if (request.method not in ("GET", "HEAD", "OPTIONS")
+            and not path.startswith("/socket.io")
+            and path != "/api/activation/wake"):
+        from app import activation
+        if not activation.is_active(session.get("client_id")):
+            return jsonify({"error": t("err_deactivated")}), 409
     return None
