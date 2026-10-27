@@ -203,7 +203,13 @@ button.tb-chip:hover { background: var(--win-2); color: var(--text); }
   position: absolute; right: 0; bottom: 0; width: 18px; height: 18px;
   cursor: nwse-resize; z-index: 5;
 }
-.window.maximized { border-radius: 0; }
+/* !important overrides the inline left/top/width/height set by the window
+   manager, which are kept underneath so un-maximize restores them. */
+.window.maximized {
+  left: 0 !important; top: 0 !important;
+  width: 100% !important; height: 100% !important;
+  border-radius: 0;
+}
 
 /* ---------- taskbar ---------- */
 #taskbar {
