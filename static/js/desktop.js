@@ -160,8 +160,14 @@
         win.el.classList.add('maximized');
         return;
       }
-      win.el.style.left = clamp(geom.left, 0, Math.max(0, layer.width - 200)) + 'px';
-      win.el.style.top = clamp(geom.top, 0, Math.max(0, layer.height - 60)) + 'px';
+      // cascade same-type windows (e.g. several terminals on one host)
+      // so they don't open exactly stacked
+      var same = 0;
+      wm.windows.forEach(function (w) { if (w.type === win.type) same++; });
+      win.el.style.left = clamp(geom.left + same * 26, 0,
+        Math.max(0, layer.width - 200)) + 'px';
+      win.el.style.top = clamp(geom.top + same * 22, 0,
+        Math.max(0, layer.height - 60)) + 'px';
       win.el.style.width = Math.min(geom.width, layer.width - 20) + 'px';
       win.el.style.height = Math.min(geom.height, layer.height - 20) + 'px';
       if (geom.maximized) win.el.classList.add('maximized');
@@ -558,7 +564,10 @@
       card.appendChild(cg);
       card.appendChild(meta);
       if (OS.state.status[host.id] === false) card.style.opacity = '0.6';
-      card.addEventListener('click', function () { OS.term.open(host.id); });
+      // tap re-enters the running session; long-press menu opens another
+      card.addEventListener('click', function () {
+        OS.term.open(host.id, {reuse: true});
+      });
       var pressTimer = null;
       card.addEventListener('touchstart', function (e) {
         pressTimer = setTimeout(function () {
@@ -575,6 +584,15 @@
     updateTopbar();
   }
 
+  function deleteHost(host) {
+    OS.confirm(OS.t('hm_confirm_delete', {name: host.name}), true)
+      .then(function (yes) {
+        if (!yes) return;
+        OS.api('/api/hosts/' + host.id, {method: 'DELETE'})
+          .then(refreshHosts);
+      });
+  }
+
   function hostMenu(host, x, y) {
     OS.ctxMenu([
       {icon: 'terminal', label: OS.t('ctx_open_terminal'),
@@ -585,14 +603,7 @@
       {icon: 'edit', label: OS.t('ctx_edit_host'),
        onClick: function () { openHostManager(host.id); }},
       {icon: 'close', label: OS.t('ctx_delete_host'), danger: true,
-       onClick: function () {
-         OS.confirm(OS.t('hm_confirm_delete', {name: host.name}), true)
-           .then(function (yes) {
-             if (!yes) return;
-             OS.api('/api/hosts/' + host.id, {method: 'DELETE'})
-               .then(refreshHosts);
-           });
-       }}
+       onClick: function () { deleteHost(host); }}
     ], x, y);
   }
 
@@ -688,6 +699,10 @@
       var editBtn = OS.el('button', 'btn btn-sm', OS.t('edit'));
       editBtn.addEventListener('click', function () { hostForm(win, host.id); });
       tdAct.appendChild(editBtn);
+      var delBtn = OS.el('button', 'btn btn-danger btn-sm', OS.t('delete'));
+      delBtn.style.marginLeft = '6px';
+      delBtn.addEventListener('click', function () { deleteHost(host); });
+      tdAct.appendChild(delBtn);
       tr.appendChild(tdAct);
       tbody.appendChild(tr);
     });
@@ -729,7 +744,7 @@
       var isKey = form.auth_method.value === 'key';
       keyField.hidden = !isKey;
       pwField.querySelector('.field-label').textContent = isKey
-        ? 'Passphrase' : OS.t('f_password');
+        ? OS.t('f_passphrase') : OS.t('f_password');
     }
     form.auth_method.addEventListener('change', syncAuth);
     syncAuth();
@@ -740,7 +755,10 @@
     cancelBtn.style.margin = '10px 0 0 8px';
     pane.appendChild(saveBtn);
     pane.appendChild(cancelBtn);
-    cancelBtn.addEventListener('click', function () { pane.remove(); });
+    cancelBtn.addEventListener('click', function () {
+      pane.remove();
+      wrap.hidden = false;   // bring the host list back
+    });
     saveBtn.addEventListener('click', function () {
       var payload = {
         name: form.name.value, group_name: form.group_name.value,
@@ -758,6 +776,7 @@
         if (res.error) { OS.toast(res.error, true); return; }
         OS.toast(OS.t('hm_saved'));
         pane.remove();
+        wrap.hidden = false;   // bring the host list back
         refreshHosts().then(function () {
           if (win.el.isConnected) renderHostsTable(win);
         });

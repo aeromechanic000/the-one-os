@@ -144,6 +144,7 @@ EN = {
     "f_username": "Username",
     "f_auth": "Auth Method",
     "f_password": "Password",
+    "f_passphrase": "Passphrase",
     "f_keyfile": "Key File",
     "f_group": "Group",
     "auth_password": "Password",

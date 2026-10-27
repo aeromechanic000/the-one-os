@@ -44,18 +44,21 @@
       OS.layout.onChange(function () { setTimeout(fitActive, 60); });
     },
 
-    open: function (hostId) {
+    open: function (hostId, opts) {
       var host = OS.hostById(hostId);
       var name = host ? host.name : 'terminal';
-      // reuse a window if one is already open for this host
-      var existing = null;
-      term.sessions.forEach(function (s) {
-        if (s.hostId === hostId && s.state !== 'closed') existing = s;
-      });
-      if (existing) {
-        existing.win.el.classList.remove('hidden-win');
-        OS.wm.focus(existing.win);
-        return;
+      // every open launches a fresh terminal (multiple per host); callers
+      // that re-enter an existing session pass {reuse: true}
+      if (opts && opts.reuse) {
+        var existing = null;
+        term.sessions.forEach(function (s) {
+          if (s.hostId === hostId && s.state !== 'closed') existing = s;
+        });
+        if (existing) {
+          existing.win.el.classList.remove('hidden-win');
+          OS.wm.focus(existing.win);
+          return;
+        }
       }
       OS.socket.emit('terminal_create', {host_id: hostId, cols: 80, rows: 24},
         function (ack) {
@@ -109,6 +112,7 @@
 
     closeSession: function (sid) {
       var s = term.sessions.get(sid);
+      if (s && s.onClose) s.onClose();
       OS.socket.emit('terminal_close', {sid: sid});
       if (s) {
         term.sessions.delete(sid);
@@ -221,21 +225,29 @@
       } catch (e) { /* not measurable yet */ }
     };
     setTimeout(s.fitNow, 60);
-    OS.bus.on('win-resized', function (w) {
+    var resUnsub = OS.bus.on('win-resized', function (w) {
       if (w === win) setTimeout(s.fitNow, 30);
     });
 
     // virtual keyboard toolbar (keyboard.js)
     if (OS.kb) OS.kb.attach(win, s);
 
-    OS.winClose.terminal = function (w) {
+    // per-window teardown — the shared winClose hook dispatches on w.opts.sid
+    // because several terminal windows can be open at once
+    s.onClose = function () {
       clearInterval(latTimer);
       attUnsub();
-      // window close terminates the session (single-user semantics)
-      var sess = term.sessions.get(sid);
+      clrUnsub();
+      resUnsub();
+    };
+    OS.winClose.terminal = function (w) {
+      var closing = w.opts.sid;
+      var sess = term.sessions.get(closing);
       if (sess) {
-        term.sessions.delete(sid);
-        OS.socket.emit('terminal_close', {sid: sid});
+        if (sess.onClose) sess.onClose();
+        term.sessions.delete(closing);
+        // window close terminates the session (single-user semantics)
+        OS.socket.emit('terminal_close', {sid: closing});
       }
     };
   };
