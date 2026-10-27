@@ -58,7 +58,7 @@
         card.appendChild(swatch);
         card.appendChild(OS.el('span', 'theme-name', OS.t(th.nameKey)));
         card.addEventListener('click', function () {
-          OS.theme.apply(th.id);
+          OS.theme.select(th.id);   // apply + persist to backend
           render();
         });
         grid.appendChild(card);

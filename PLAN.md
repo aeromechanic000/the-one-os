@@ -54,7 +54,8 @@ GET/POST /api/attention/rules   CRUD; POST /api/attention/rules/test {rule, samp
 GET     /api/attention/rules/export   POST /api/attention/rules/import
 GET/PUT /api/settings           key–value store (incl. ai_base_url, ai_model,
                                 ai_api_key [write-only], history_days,
-                                max_single_file_mb, max_storage_mb)
+                                max_single_file_mb, max_storage_mb, theme
+                                [color theme id, registry in theme.js])
 POST    /api/ai/chat            {messages:[{role,content}]} → {reply} | 400/502
                                 (OpenAI-compatible proxy; injects a 7-day
                                 operation-history digest as context)

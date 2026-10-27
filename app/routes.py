@@ -26,6 +26,7 @@ SETTINGS_KEYS = {
     "history_days",           # operation-history retention, days
     "max_single_file_mb",     # single-file cap for transfers/uploads/preview
     "max_storage_mb",         # total storage/ quota for the file browser
+    "theme",                  # color theme id (registry in static/js/theme.js)
 }
 SETTINGS_DEFAULTS = {
     "keyboard_mode": "windows",
@@ -39,6 +40,13 @@ SETTINGS_DEFAULTS = {
     "history_days": "90",
     "max_single_file_mb": "512",
     "max_storage_mb": "2048",
+    "theme": "midnight",
+}
+
+# keep in sync with THEMES in static/js/theme.js
+THEME_IDS = {
+    "midnight", "dracula", "nord", "tokyo", "solar-dark",
+    "gruvbox", "solar-light", "daylight",
 }
 
 
@@ -156,6 +164,8 @@ def put_settings():
                                   "sequence": str(item["sequence"])[:256]})
             value = json.dumps(clean)
         elif key == "keyboard_mode" and value not in ("windows", "mac"):
+            continue
+        elif key == "theme" and value not in THEME_IDS:
             continue
         elif key == "keyboard_strategy" and value not in ("coexist", "replace"):
             continue

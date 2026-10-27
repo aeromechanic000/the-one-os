@@ -1,8 +1,11 @@
 /* Color themes: registry, persistence and terminal palettes.
    main.css holds the html[data-theme] variable blocks; the snippet in
-   base.html applies the saved theme before first paint; this module owns
-   switching (OS.theme.apply) and notifies listeners on the OS.bus 'theme'
-   event so open terminals can restyle themselves. */
+   base.html applies the localStorage cache before first paint; this module
+   owns switching (OS.theme.apply), persists the choice to the backend
+   settings store (OS.theme.select) so it follows the account across
+   machines, re-syncs from the server at boot (syncFromServer), and
+   notifies listeners on the OS.bus 'theme' event so open terminals can
+   restyle themselves. */
 (function () {
   'use strict';
   var OS = window.OS;
@@ -118,8 +121,28 @@
     } else {
       document.documentElement.setAttribute('data-theme', id);
     }
-    OS.store.set('theme', id);
+    OS.store.set('theme', id);   // pre-paint cache; server copy is the truth
     if (!silent) { OS.bus.emit('theme', id); }
+  }
+
+  /* User picked a theme: apply locally and persist to the backend so the
+     choice follows the account to every machine. */
+  function select(id) {
+    apply(id);
+    OS.api('/api/settings', {method: 'PUT', body: {theme: id}})
+      .then(function (res) {
+        if (res.error) OS.toast(res.error, true);
+      });
+  }
+
+  /* The server theme wins over the localStorage cache (another machine
+     may have chosen it). Called once at boot after the pre-paint apply. */
+  function syncFromServer() {
+    OS.api('/api/settings').then(function (s) {
+      if (s && s.theme && isKnown(s.theme) && s.theme !== current) {
+        apply(s.theme);
+      }
+    });
   }
 
   function get() {
@@ -134,6 +157,8 @@
     THEMES: THEMES,
     SWATCH: SWATCH,
     apply: apply,
+    select: select,
+    syncFromServer: syncFromServer,
     get: get,
     xtermTheme: xtermTheme
   };

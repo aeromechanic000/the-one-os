@@ -35,6 +35,9 @@
       });
     });
 
+    // the theme chosen on any machine wins over this browser's cache
+    OS.theme.syncFromServer();
+
     OS.bus.on('attention', function (data) {
       var hostCard = document.querySelector('#phone-host-list');
       if (!hostCard) return;
