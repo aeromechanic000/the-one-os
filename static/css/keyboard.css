@@ -1,13 +1,13 @@
 /* Virtual keyboard (IDEA.md §5): layer 1 toolbar, layer 2 full panel,
    layer 3 custom keys ride the toolbar. Sticky modifiers highlight. */
 
+/* Toolbar wraps onto multiple lines so every key stays visible on any
+   width — no horizontal scrolling (IDEA.md §5 layer 1). */
 .vk-toolbar {
-  display: flex; align-items: center; gap: 4px; flex: 0 0 auto;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px; flex: 0 0 auto;
   padding: 5px 6px; background: var(--bg-2);
-  border-top: 1px solid var(--border); overflow-x: auto;
-  scrollbar-width: none;
+  border-top: 1px solid var(--border);
 }
-.vk-toolbar::-webkit-scrollbar { display: none; }
 .vk-key {
   background: var(--win-3); border: 1px solid var(--border); color: var(--text);
   border-radius: 6px; min-width: 40px; height: 40px; padding: 0 10px;
@@ -29,14 +29,16 @@
   padding: 8px; max-height: 52dvh; overflow-y: auto;
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.4);
 }
-.vk-row { display: flex; gap: 4px; margin-bottom: 5px; }
-.vk-row .vk-key { flex: 1 1 0; min-width: 0; padding: 0 4px; }
-.vk-row .vk-key.w2 { flex: 2 2 0; }
+/* Panel rows wrap: keys keep a usable minimum size and flow onto extra
+   lines instead of shrinking below touch-target width on narrow screens. */
+.vk-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; }
+.vk-row .vk-key { flex: 1 1 38px; min-width: 38px; padding: 0 4px; }
+.vk-row .vk-key.w2 { flex: 2 2 76px; }
 .vk-row .vk-key.spacer { visibility: hidden; }
 .vk-combos { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
 .vk-combos .vk-key { min-width: 52px; height: 34px; font-size: 12px; }
-.vk-fn-row { display: flex; gap: 4px; margin-bottom: 5px; }
-.vk-fn-row .vk-key { flex: 1 1 0; min-width: 0; height: 32px; font-size: 11px; }
+.vk-fn-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; }
+.vk-fn-row .vk-key { flex: 1 1 40px; min-width: 40px; height: 32px; font-size: 11px; }
 .vk-panel-head {
   display: flex; align-items: center; justify-content: space-between;
   color: var(--text-dim); font-size: 11px; margin-bottom: 6px;
@@ -54,5 +56,5 @@
 .term-vk-toggle { font-size: 14px; }
 
 @media (max-width: 767px) {
-  .vk-key { min-width: 38px; height: 42px; }
+  .vk-key { min-width: 40px; height: 44px; }
 }

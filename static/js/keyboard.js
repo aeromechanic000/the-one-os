@@ -61,6 +61,9 @@
       toolbar.innerHTML = '';
       kb.buildToolbar(toolbar, session);
       kb.applyInputMode(session);
+      // the toolbar may wrap to a different line count than before —
+      // refit so the terminal uses the remaining height
+      if (session.fitNow) session.fitNow();
     },
 
     applyAllTerminals: function () {
