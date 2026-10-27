@@ -119,7 +119,8 @@
     logout: '<path d="M6.5 2.5h-3v11h3"/><path d="M9 8h5M11.5 5.5 14 8l-2.5 2.5"/>',
     play: '<path d="M5 3.5v9l7.5-4.5z"/>',
     diamond: '<path d="M8 1.5 14.5 8 8 14.5 1.5 8z"/>',
-    diamondFill: '<path d="M8 1.5 14.5 8 8 14.5 1.5 8z" fill="currentColor" stroke="none"/>'
+    diamondFill: '<path d="M8 1.5 14.5 8 8 14.5 1.5 8z" fill="currentColor" stroke="none"/>',
+    chart: '<path d="M3 13V9M6.5 13V5M10 13V7M13 13V3.5"/>'
   };
   var ICON_SVG = {};
   Object.keys(ICON_PATHS).forEach(function (name) {

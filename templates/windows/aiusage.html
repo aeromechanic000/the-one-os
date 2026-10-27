@@ -1,0 +1,54 @@
+<template id="tpl-aiusage">
+  <div class="aiu-wrap">
+    <div class="hosts-toolbar">
+      <button class="btn btn-primary btn-sm aiu-add">{{ t('aiu_add') }}</button>
+      <button class="btn btn-sm aiu-refresh">{{ t('aiu_refresh_all') }}</button>
+    </div>
+    <div class="aiu-list"></div>
+  </div>
+</template>
+
+<template id="tpl-aiu-form">
+  <form class="host-form aiu-form">
+    <div class="form-row">
+      <div class="aiu-tpl-row">
+        <label class="field-label">{{ t('aiu_template') }}</label>
+        <select class="aiu-template" name="template"></select>
+      </div>
+      <div>
+        <label class="field-label">{{ t('aiu_label') }}</label>
+        <input name="label" maxlength="64">
+      </div>
+    </div>
+    <div class="field-hint">{{ t('aiu_template_hint') }}</div>
+    <div class="form-row">
+      <div>
+        <label class="field-label">{{ t('aiu_base_url') }}</label>
+        <input name="base_url" maxlength="512" placeholder="https://api.example.com/v1">
+      </div>
+      <div>
+        <label class="field-label">{{ t('aiu_auth_style') }}</label>
+        <select name="auth_style">
+          <option value="bearer">{{ t('aiu_auth_bearer') }}</option>
+          <option value="x-api-key">{{ t('aiu_auth_xapikey') }}</option>
+        </select>
+      </div>
+    </div>
+    <div>
+      <label class="field-label">{{ t('aiu_usage_url') }}</label>
+      <input name="usage_url" maxlength="512" placeholder="https://…/balance">
+    </div>
+    <div class="field-hint">{{ t('aiu_usage_url_hint') }}</div>
+    <div class="form-row">
+      <div>
+        <label class="field-label">{{ t('aiu_extract_path') }}</label>
+        <input name="extract_path" maxlength="256" placeholder="data.available_balance">
+      </div>
+      <div>
+        <label class="field-label">{{ t('aiu_token') }}</label>
+        <input name="token" type="password" autocomplete="new-password">
+      </div>
+    </div>
+    <div class="field-hint aiu-token-hint">{{ t('aiu_token_hint') }}</div>
+  </form>
+</template>

@@ -63,6 +63,7 @@ Backend (single Flask process + background threads):
 - `app/activation.py` — single-active-frontend state (memory-only): latest login or `POST /api/activation/wake` is the only active client; other logged-in frontends get 409 on writes and their mutating socket events are ignored (reads/mirrors keep flowing so they can wake and re-sync).
 - `app/cleanup.py` — hourly: storage files >24 h, preview cache >24 h, op-history pruning per `history_days`.
 - `app/ai.py` — OpenAI-compatible chat proxy (stdlib urllib, no new deps); injects a 7-day operation-history digest as context.
+- `app/ai_usage.py` — AI Service Usage Monitor: LLM provider tokens (ChatGPT/Anthropic/DeepSeek/GLM/Kimi/MiniMax as editable config templates or fully manual) Fernet-encrypted with the persisted `ai_tokens.key`; server-side check probes each token's usage/balance endpoint (normalized metrics + honest notes; tokens never return to the client).
 - `app/history.py` — append-only operation log (`op_history` table) + digest builder; `record()` never raises.
 - `app/limits.py` — max single-file / storage-quota checks (settings `max_single_file_mb`, `max_storage_mb`).
 - `app/locality.py` — detects hosts that point at this machine (loopback/interface/hostname/public IP); sets `hosts.is_local` in background threads (boot recheck, on add/update, hourly) — never blocks a request.
@@ -74,7 +75,7 @@ Backend (single Flask process + background threads):
 Frontend (vanilla JS, no build step):
 
 - `templates/` — `base.html`, `login.html`, `desktop.html`; `templates/windows/*.html` are window fragments included as `<template>` elements and cloned per window by JS.
-- `static/js/` — `layout.js` (form detection), `desktop.js` (window manager, icons, taskbar, host manager UI), `terminal.js`, `keyboard.js`, `notepad.js`, `files.js`, `transfer.js`, `preview.js`, `actions.js`, `settings.js`, `theme.js` (theme registry + xterm palettes), `chat.js` (AI assistant panel), `activation.js` (sleep overlay + wake-up for non-active frontends).
+- `static/js/` — `layout.js` (form detection), `desktop.js` (window manager, icons, taskbar, host manager UI), `terminal.js`, `keyboard.js`, `notepad.js`, `files.js`, `transfer.js`, `preview.js`, `actions.js`, `settings.js`, `theme.js` (theme registry + xterm palettes), `chat.js` (AI assistant panel), `activation.js` (sleep overlay + wake-up for non-active frontends), `aiusage.js` (AI usage monitor window).
 - `static/css/` — `main.css` (desktop), `mobile.css` (phone/tablet), `keyboard.css`.
 - Vendored from CDN in `base.html`: socket.io, xterm.js + fit addon, PDF.js, marked, DOMPurify.
 

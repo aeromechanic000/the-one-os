@@ -51,3 +51,24 @@ BOOT_ID = secrets.token_urlsafe(16)
 # Host-password encryption key: random per boot, so encrypted host passwords
 # from a previous run cannot be decrypted after restart (re-entry required).
 FERNET = Fernet(Fernet.generate_key())
+
+# --- AI provider tokens (persisted, user's own third-party credentials) --------
+# Unlike host passwords, stored LLM API tokens must survive a restart or the
+# usage monitor would need re-entry every boot — so they use a dedicated
+# key file (0600, generated once, kept next to the DB) instead of the
+# per-boot key.
+def _init_ai_token_fernet():
+    key_path = os.path.join(os.path.dirname(DB_PATH) or ".", "ai_tokens.key")
+    try:
+        with open(key_path, "rb") as fh:
+            return Fernet(fh.read().strip())
+    except OSError:
+        pass
+    raw = Fernet.generate_key()
+    fd = os.open(key_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "wb") as fh:
+        fh.write(raw)
+    return Fernet(raw)
+
+
+AI_TOKEN_FERNET = _init_ai_token_fernet()

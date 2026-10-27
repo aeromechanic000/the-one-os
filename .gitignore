@@ -225,3 +225,4 @@ cache/
 webos.db
 webos.db-*
 .DS_Store
+ai_tokens.key

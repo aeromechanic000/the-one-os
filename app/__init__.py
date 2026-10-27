@@ -51,11 +51,12 @@ def create_app():
     from app.auth import before_request_hook
     app.before_request(before_request_hook)
 
-    from app import (actions as actions_bp, attention_rules, files,
+    from app import (actions as actions_bp, ai_usage, attention_rules, files,
                      files_browser, hosts, preview, routes, sockets)
     app.register_blueprint(routes.bp)
     app.register_blueprint(hosts.bp)
     app.register_blueprint(actions_bp.bp)
+    app.register_blueprint(ai_usage.bp)
     app.register_blueprint(files.bp)
     app.register_blueprint(files_browser.bp)
     app.register_blueprint(preview.bp)

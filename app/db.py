@@ -101,6 +101,28 @@ SCHEMA = [
     )
     """,
     "CREATE INDEX IF NOT EXISTS idx_op_history_ts ON op_history(ts)",
+    # ai_tokens: LLM provider tokens for the usage monitor (app/ai_usage.py).
+    # Config (base_url/auth_style/usage_url/extract_path) is prefilled from
+    # a provider template but fully editable per token. token_enc uses the
+    # persisted AI_TOKEN_FERNET key (survives restarts); last4 is kept in
+    # the clear for masked display.
+    """
+    CREATE TABLE IF NOT EXISTS ai_tokens (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        provider      TEXT NOT NULL DEFAULT 'custom',
+        label         TEXT NOT NULL DEFAULT '',
+        base_url      TEXT NOT NULL DEFAULT '',
+        auth_style    TEXT NOT NULL DEFAULT 'bearer'
+                      CHECK (auth_style IN ('bearer', 'x-api-key')),
+        usage_url     TEXT NOT NULL DEFAULT '',
+        extract_path  TEXT NOT NULL DEFAULT '',
+        token_enc     TEXT NOT NULL,
+        last4         TEXT NOT NULL DEFAULT '',
+        created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+        last_check_at TEXT NOT NULL DEFAULT '',
+        last_check    TEXT NOT NULL DEFAULT ''
+    )
+    """,
 ]
 
 
@@ -124,6 +146,16 @@ def init_db():
         if "is_local" not in cols:
             conn.execute("ALTER TABLE hosts "
                          "ADD COLUMN is_local INTEGER NOT NULL DEFAULT 0")
+        tok_cols = {r[1] for r in conn.execute("PRAGMA table_info(ai_tokens)")}
+        for col, ddl in (
+            ("base_url", "TEXT NOT NULL DEFAULT ''"),
+            ("auth_style", "TEXT NOT NULL DEFAULT 'bearer'"),
+            ("usage_url", "TEXT NOT NULL DEFAULT ''"),
+            ("extract_path", "TEXT NOT NULL DEFAULT ''"),
+        ):
+            if col not in tok_cols:
+                conn.execute("ALTER TABLE ai_tokens ADD COLUMN %s %s"
+                             % (col, ddl))
         conn.commit()
 
 

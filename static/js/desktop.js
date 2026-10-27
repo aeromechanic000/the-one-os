@@ -18,9 +18,16 @@
 
   var WIN_ICONS = {
     terminal: 'terminal', notepad: 'edit', files: 'folder', actions: 'bolt',
-    hosts: 'server', settings: 'gear', preview: 'eye'
+    hosts: 'server', settings: 'gear', preview: 'eye', aiusage: 'chart'
   };
-  var SINGLETONS = {notepad: 1, files: 1, actions: 1, hosts: 1, settings: 1, preview: 1};
+  var SINGLETONS = {notepad: 1, files: 1, actions: 1, hosts: 1, settings: 1,
+                    preview: 1, aiusage: 1};
+  // titles for windows opened without an explicit one (start menu, nav)
+  var WIN_TITLES = {
+    notepad: OS.t('ctx_new_note'), files: OS.t('ctx_file_transfer'),
+    actions: OS.t('ctx_quick_actions'), hosts: OS.t('ctx_host_manager'),
+    settings: OS.t('ctx_system_settings'), aiusage: OS.t('menu_ai_usage')
+  };
 
   // ================= window manager =================
   var wm = OS.wm = {
@@ -90,7 +97,8 @@
       backBtn.appendChild(OS.icon('back'));
       var icon = OS.el('span', 'win-icon');
       icon.innerHTML = OS.iconSvg(WIN_ICONS[type] || '');
-      var title = OS.el('span', 'win-title', opts.title || type);
+      var title = OS.el('span', 'win-title',
+        opts.title || WIN_TITLES[type] || type);
       var badge = OS.el('span', 'win-attention-badge');
       badge.hidden = true;
       var minBtn = OS.el('button', 'win-btn');
@@ -280,6 +288,7 @@
       actions: {w: 640, h: 480},
       hosts: {w: 620, h: 420},
       settings: {w: 640, h: 520},
+      aiusage: {w: 640, h: 540},
       preview: {w: 700, h: 520}
     };
     var p = presets[type] || {w: 600, h: 420};
@@ -417,6 +426,7 @@
       {icon: 'folder', label: OS.t('ctx_file_transfer'), type: 'files'},
       {icon: 'bolt', label: OS.t('ctx_quick_actions'), type: 'actions'},
       {icon: 'server', label: OS.t('ctx_host_manager'), type: 'hosts'},
+      {icon: 'chart', label: OS.t('menu_ai_usage'), type: 'aiusage'},
       {icon: 'gear', label: OS.t('ctx_system_settings'), type: 'settings'}
     ].forEach(function (item) {
       var btn = OS.el('button', 'menu-item');

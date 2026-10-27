@@ -59,6 +59,17 @@ GET/PUT /api/settings           key–value store (incl. ai_base_url, ai_model,
 POST    /api/ai/chat            {messages:[{role,content}]} → {reply} | 400/502
                                 (OpenAI-compatible proxy; injects a 7-day
                                 operation-history digest as context)
+GET/POST/PUT/DELETE /api/ai/tokens[/<id>]   AI usage monitor tokens
+POST    /api/ai/tokens/<id>/check
+                                Templates (openai/anthropic/deepseek/glm/
+                                kimi/minimax) quick-fill an editable config
+                                (base_url, auth_style bearer|x-api-key,
+                                usage_url, extract_path) or fill it in
+                                manually (provider=custom). Check probes the
+                                usage endpoint server-side; the token is
+                                Fernet-encrypted with a persisted key file
+                                (ai_tokens.key, gitignored) and never leaves
+                                the server (only ••••last4 is shown).
 GET     /api/history            ?days=&limit= → [{ts,type,host,detail}]
 
 Single-active frontend: the latest login or wake is the only active client
@@ -75,7 +86,7 @@ Server→client: `terminal_output {sid,data}`, `terminal_meta {sid,host_id,name,
 
 ### DB tables
 
-`hosts`, `actions`, `staged_files`, `attention_rules` (IDEA.md §7.1), `settings(key,value)`, `op_history(ts,type,host,detail)` — operation log pruned hourly per the `history_days` setting; read by the AI assistant.
+`hosts`, `actions`, `staged_files`, `attention_rules` (IDEA.md §7.1), `settings(key,value)`, `op_history(ts,type,host,detail)` — operation log pruned hourly per the `history_days` setting; read by the AI assistant — and `ai_tokens(provider,label,base_url,auth_style,usage_url,extract_path,token_enc,last4,…)` for the usage monitor.
 
 ## Phase details
 
