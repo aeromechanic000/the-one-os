@@ -6,18 +6,26 @@ auth style, usage endpoint, JSON extract path) — picking one quick-fills
 the add form, and every field stays editable. A token can also be defined
 fully manually ("custom" provider) and modified or deleted later.
 
+Template base URLs are each provider's ANTHROPIC-COMPATIBLE endpoint (the
+one Claude Code itself talks to), and the usage queries mirror cc-switch's
+usage monitor: coding-plan quotas for GLM/Kimi/MiniMax, account balances
+for DeepSeek/Moonshot, the OAuth usage report for Claude subscriptions
+(see https://github.com/farion1231/cc-switch). The MiniMax China account
+system serves its quota endpoint from api.minimaxi.com even though
+inference moved to api.minimax.cn — same key, both hosts.
+
 Tokens are Fernet-encrypted with the PERSISTED AI-token key (config.py) so
 they survive restarts — unlike host passwords, re-entering six API keys
 every boot would defeat the feature. The plaintext token never leaves this
 module; the client only ever sees the last 4 characters.
 
-What providers actually expose differs wildly (balance for DeepSeek/Kimi,
-organization reports for OpenAI/Anthropic admin keys, nothing public for
-MiniMax), so every check returns normalized `metrics` where possible plus
-an honest `note`/`error`. Subscription-style 5-hour/weekly limits are not
-API-exposed by any provider; windowed values pass through with labels.
+What providers actually expose differs wildly (quota percentages for
+coding plans, currency balances for pay-as-you-go keys, organization
+reports for OpenAI/Anthropic admin keys), so every check returns
+normalized `metrics` where possible plus an honest `note`/`error`.
 """
 import json
+import re
 import time
 import urllib.error
 import urllib.request
@@ -38,6 +46,8 @@ bp = Blueprint("ai_usage", __name__)
 
 # Every field a template prefills is editable in the add form, so the
 # template list is just saved keystrokes, not a hard-coded probe.
+# metric_key names the i18n label for the extracted value (quotas are not
+# balances); it rides on the provider id, never on the editable form.
 PROVIDER_TEMPLATES = {
     "openai": {
         "name_key": "aiu_p_openai",
@@ -46,44 +56,90 @@ PROVIDER_TEMPLATES = {
         "usage_url": "https://api.openai.com/v1/organization/rate_limits",
         "extract_path": "",
     },
-    "anthropic": {
+    "anthropic": {   # console API key (sk-ant-api03-…)
         "name_key": "aiu_p_anthropic",
         "base_url": "https://api.anthropic.com/v1",
         "auth_style": "x-api-key",
         "usage_url": "",   # org usage needs an Admin key; validate only
         "extract_path": "",
     },
+    "claude_code": {   # Claude Pro/Max subscription OAuth token
+        "name_key": "aiu_p_claude_code",
+        "base_url": "",
+        "auth_style": "oauth",
+        "usage_url": "https://api.anthropic.com/api/oauth/usage",
+        "extract_path": "five_hour.utilization",
+        "metric_key": "aiu_5h_used",
+    },
     "deepseek": {
         "name_key": "aiu_p_deepseek",
-        "base_url": "https://api.deepseek.com/v1",
+        "base_url": "https://api.deepseek.com/anthropic",
         "auth_style": "bearer",
         "usage_url": "https://api.deepseek.com/user/balance",
         "extract_path": "balance_infos[0].total_balance",
+        "metric_key": "aiu_balance",
     },
-    "glm": {
+    "glm": {   # GLM Coding Plan; pay-as-you-go keys get a "no coding plan" body
         "name_key": "aiu_p_glm",
-        "base_url": "https://open.bigmodel.cn/api/paas/v4",
-        "auth_style": "bearer",
-        "usage_url": "",
-        "extract_path": "",
+        "base_url": "https://open.bigmodel.cn/api/anthropic",
+        "auth_style": "raw",
+        "usage_url": "https://open.bigmodel.cn/api/monitor/usage/quota/limit",
+        "extract_path": "data.limits[unit=3].percentage",
+        "metric_key": "aiu_5h_used",
     },
-    "kimi": {
+    "glm_intl": {
+        "name_key": "aiu_p_glm_intl",
+        "base_url": "https://api.z.ai/api/anthropic",
+        "auth_style": "raw",
+        "usage_url": "https://api.z.ai/api/monitor/usage/quota/limit",
+        "extract_path": "data.limits[unit=3].percentage",
+        "metric_key": "aiu_5h_used",
+    },
+    "kimi": {   # Kimi For Coding
         "name_key": "aiu_p_kimi",
-        "base_url": "https://api.moonshot.cn/v1",
+        "base_url": "https://api.kimi.com/coding/",
+        "auth_style": "bearer",
+        "usage_url": "https://api.kimi.com/coding/v1/usages",
+        "extract_path": "usage.remaining",
+        "metric_key": "aiu_weekly_left",
+    },
+    "kimi_global": {
+        "name_key": "aiu_p_kimi_global",
+        "base_url": "https://api.kimi.ai/coding/",
+        "auth_style": "bearer",
+        "usage_url": "https://api.kimi.ai/coding/v1/usages",
+        "extract_path": "usage.remaining",
+        "metric_key": "aiu_weekly_left",
+    },
+    "moonshot": {   # Moonshot pay-as-you-go platform key
+        "name_key": "aiu_p_moonshot",
+        "base_url": "https://api.moonshot.cn/anthropic",
         "auth_style": "bearer",
         "usage_url": "https://api.moonshot.cn/v1/users/me/balance",
         "extract_path": "data.available_balance",
+        "metric_key": "aiu_balance",
     },
-    "minimax": {
+    "minimax": {   # quota API lives on minimaxi.com even for .cn accounts
         "name_key": "aiu_p_minimax",
-        "base_url": "https://api.minimax.chat/v1",
+        "base_url": "https://api.minimax.cn/anthropic",
         "auth_style": "bearer",
-        "usage_url": "",
-        "extract_path": "",
+        "usage_url": "https://api.minimaxi.com/v1/api/openplatform/coding_plan/remains",
+        "extract_path":
+            "model_remains[model_name=general].current_interval_remaining_percent",
+        "metric_key": "aiu_5h_left",
+    },
+    "minimax_intl": {
+        "name_key": "aiu_p_minimax_intl",
+        "base_url": "https://api.minimax.io/anthropic",
+        "auth_style": "bearer",
+        "usage_url": "https://api.minimax.io/v1/api/openplatform/coding_plan/remains",
+        "extract_path":
+            "model_remains[model_name=general].current_interval_remaining_percent",
+        "metric_key": "aiu_5h_left",
     },
 }
 
-AUTH_STYLES = ("bearer", "x-api-key")
+AUTH_STYLES = ("bearer", "x-api-key", "raw", "oauth")
 
 EDITABLE_FIELDS = ("label", "base_url", "auth_style", "usage_url",
                    "extract_path")
@@ -121,25 +177,60 @@ def _get_json(url, headers):
 def _auth_headers(cfg, token):
     if cfg["auth_style"] == "x-api-key":
         return {"x-api-key": token, "anthropic-version": "2023-06-01"}
+    if cfg["auth_style"] == "raw":
+        # Zhipu monitor endpoints take the bare key, no Bearer prefix
+        return {"Authorization": token}
+    if cfg["auth_style"] == "oauth":
+        # Anthropic's OAuth usage report (Claude Code subscriptions)
+        return {"Authorization": "Bearer " + token,
+                "anthropic-beta": "oauth-2025-04-20"}
     return {"Authorization": "Bearer " + token}
 
 
+def _models_url(base):
+    """Derive the key-validation models list from a base URL. Bases that
+    already end in a version segment (OpenAI style .../v1) take /models;
+    Anthropic-compatible bases (.../anthropic, .../coding/) take /v1/models."""
+    base = (base or "").rstrip("/")
+    if not base:
+        return ""
+    if re.search(r"/v\d+$", base):
+        return base + "/models"
+    return base + "/v1/models"
+
+
 def _extract(data, path):
-    """Walk a dotted path like balance_infos[0].total_balance.
+    """Walk a dotted path like balance_infos[0].total_balance. A bracket
+    holding digits indexes a list item; [field=value] picks the first list
+    item whose field equals the value (e.g. model_remains[model_name=general]).
     Returns (found, value)."""
     node = data
     for part in [p for p in path.split(".") if p]:
-        idx = -1
+        key, idx, filt = part, -1, None
         if part.endswith("]") and "[" in part:
-            part, _, tail = part.partition("[")
-            try:
-                idx = int(tail.rstrip("]"))
-            except ValueError:
-                return False, None
-        if not isinstance(node, dict) or part not in node:
+            key, _, tail = part.partition("[")
+            tail = tail[:-1]
+            if "=" in tail:
+                field, _, val = tail.partition("=")
+                filt = (field, val)
+            else:
+                try:
+                    idx = int(tail)
+                except ValueError:
+                    return False, None
+        if not isinstance(node, dict) or key not in node:
             return False, None
-        node = node[part]
-        if idx >= 0:
+        node = node[key]
+        if filt is not None:
+            field, val = filt
+            if not isinstance(node, list):
+                return False, None
+            node = next((item for item in node
+                         if isinstance(item, dict)
+                         and str(item.get(field)) == val), None)
+            if node is None:
+                return False, None
+        elif idx >= 0:
             if isinstance(node, list) and 0 <= idx < len(node):
                 node = node[idx]
             else:
@@ -155,7 +246,7 @@ def _fmt(value):
 
 # --- generic probe ----------------------------------------------------------------
 
-def probe(cfg, token):
+def probe(cfg, token, metric_key=""):
     """Run one usage check against the token's config. Never raises."""
     metrics, note = [], ""
     headers = _auth_headers(cfg, token)
@@ -166,10 +257,11 @@ def probe(cfg, token):
             if cfg["extract_path"]:
                 found, value = _extract(data, cfg["extract_path"])
                 if found:
-                    metrics.append(_metric(t("aiu_balance"), _fmt(value)))
+                    metrics.append(_metric(t(metric_key or "aiu_usage"),
+                                           _fmt(value)))
                 else:
                     metrics.append(_metric(
-                        t("aiu_balance"), _fmt(data)))
+                        t(metric_key or "aiu_usage"), _fmt(data)))
                     note = t("aiu_extract_missed")
             else:
                 metrics.append(_metric(t("aiu_usage"), _fmt(data)))
@@ -177,10 +269,10 @@ def probe(cfg, token):
             note = "%s %s" % (t("aiu_usage_failed"), str(exc))
 
     # key validation against the models list (cheap and universal)
-    base = (cfg["base_url"] or "").rstrip("/")
-    if base:
+    models = _models_url(cfg["base_url"])
+    if models:
         try:
-            _get_json(base + "/models", headers)
+            _get_json(models, headers)
             metrics.append(_metric(t("aiu_key_valid"), "OK"))
         except RuntimeError as exc:
             if not metrics:
@@ -329,8 +421,10 @@ def check_token(tid):
     except Exception:
         return jsonify({"error": t("aiu_key_needs_reentry")}), 500
     cfg = {k: row[k] for k in EDITABLE_FIELDS}
+    metric_key = PROVIDER_TEMPLATES.get(row["provider"], {}) \
+        .get("metric_key", "")
     try:
-        result = probe(cfg, token)
+        result = probe(cfg, token, metric_key)
     except Exception as exc:   # probe guards itself; belt and braces
         result = _fail(str(exc))
     db.execute(
