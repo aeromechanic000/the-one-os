@@ -93,6 +93,7 @@ EN = {
     "aiu_extract_missed": "Extract path not found in the response; showing the raw JSON.",
     "aiu_usage_failed": "Usage endpoint:",
     "aiu_validate_failed": "Key validation:",
+    "aiu_dns_hint": "The server running One OS cannot resolve that host — check its DNS or give the process an HTTPS proxy (https_proxy).",
     "aiu_window_5h": "5-hour window",
     "aiu_window_7d": "7-day window",
     "aiu_window_30d": "30-day window",

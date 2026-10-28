@@ -29,6 +29,7 @@ import re
 import time
 import urllib.error
 import urllib.request
+from urllib.parse import urlparse
 
 from flask import Blueprint, jsonify, request
 
@@ -167,7 +168,10 @@ def _get_json(url, headers):
             detail = ""
         raise RuntimeError("HTTP %d %s" % (exc.code, detail.strip()))
     except (urllib.error.URLError, OSError) as exc:
-        raise RuntimeError(str(exc)[:200])
+        # keep the failing host in the message — "<urlopen error [Errno -2]
+        # Name or service not known>" alone doesn't say which endpoint died
+        reason = str(getattr(exc, "reason", exc) or exc)[:160]
+        raise RuntimeError("%s [%s]" % (reason, urlparse(url).netloc))
     try:
         return json.loads(raw)
     except ValueError:
@@ -244,6 +248,16 @@ def _fmt(value):
     return str(value)
 
 
+def _with_dns_hint(text):
+    """Append an actionable hint when the failure is hostname resolution."""
+    low = text.lower()
+    if any(m in low for m in ("name or service not known", "getaddrinfo",
+                              "name does not resolve",
+                              "temporary failure in name resolution")):
+        return "%s %s" % (text, t("aiu_dns_hint"))
+    return text
+
+
 # --- generic probe ----------------------------------------------------------------
 
 def probe(cfg, token, metric_key=""):
@@ -266,7 +280,8 @@ def probe(cfg, token, metric_key=""):
             else:
                 metrics.append(_metric(t("aiu_usage"), _fmt(data)))
         except RuntimeError as exc:
-            note = "%s %s" % (t("aiu_usage_failed"), str(exc))
+            note = "%s %s" % (t("aiu_usage_failed"),
+                              _with_dns_hint(str(exc)))
 
     # key validation against the models list (cheap and universal)
     models = _models_url(cfg["base_url"])
@@ -276,9 +291,10 @@ def probe(cfg, token, metric_key=""):
             metrics.append(_metric(t("aiu_key_valid"), "OK"))
         except RuntimeError as exc:
             if not metrics:
-                return _fail(str(exc))
+                return _fail(_with_dns_hint(str(exc)))
             note = (note + " " if note else "") + \
-                "%s %s" % (t("aiu_validate_failed"), str(exc))
+                "%s %s" % (t("aiu_validate_failed"),
+                           _with_dns_hint(str(exc)))
 
     if not metrics:
         note = note or t("aiu_no_usage_api")
