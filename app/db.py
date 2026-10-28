@@ -113,7 +113,8 @@ SCHEMA = [
         label         TEXT NOT NULL DEFAULT '',
         base_url      TEXT NOT NULL DEFAULT '',
         auth_style    TEXT NOT NULL DEFAULT 'bearer'
-                      CHECK (auth_style IN ('bearer', 'x-api-key')),
+                      CHECK (auth_style IN
+                             ('bearer', 'x-api-key', 'raw', 'oauth')),
         usage_url     TEXT NOT NULL DEFAULT '',
         extract_path  TEXT NOT NULL DEFAULT '',
         token_enc     TEXT NOT NULL,
@@ -156,6 +157,18 @@ def init_db():
             if col not in tok_cols:
                 conn.execute("ALTER TABLE ai_tokens ADD COLUMN %s %s"
                              % (col, ddl))
+        # auth_style later gained 'raw' (Zhipu) and 'oauth' (Claude
+        # subscriptions). SQLite cannot ALTER a CHECK constraint, so when
+        # the old two-style constraint is detected the table is rebuilt
+        # from the current schema, preserving all rows.
+        row = conn.execute("SELECT sql FROM sqlite_master "
+                           "WHERE type='table' AND name='ai_tokens'").fetchone()
+        if row and "'x-api-key')" in (row[0] or ""):
+            create = next(s for s in SCHEMA if "ai_tokens" in s)
+            conn.execute("ALTER TABLE ai_tokens RENAME TO ai_tokens_old")
+            conn.execute(create)
+            conn.execute("INSERT INTO ai_tokens SELECT * FROM ai_tokens_old")
+            conn.execute("DROP TABLE ai_tokens_old")
         conn.commit()
 
 
