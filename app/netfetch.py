@@ -8,14 +8,20 @@ though the machine has working IP connectivity.
 
 How: when the normal fetch fails with a name-resolution error, resolve
 the host ourselves — a minimal A-record query sent directly to public
-resolvers over UDP (default 223.5.5.5 / 119.29.29.29, override with the
-ONE_OS_DNS env var, comma-separated) — then retry once against that IP
-with the hostname preserved for TLS SNI and certificate validation.
-Results are cached for a few minutes.
+resolvers over UDP — then retry once against that IP with the hostname
+preserved for TLS SNI and certificate validation. Results are cached for
+a few minutes.
+
+The resolver list is user-managed in Settings → Network (the
+`dns_fallback` setting): IPv4 addresses with an enabled flag, queried in
+list order. Defaults enable the mainland-China-reachable pair (AliDNS /
+DNSPod) and keep 1.1.1.1 / 8.8.8.8 / 9.9.9.9 listed but off for servers
+elsewhere. The ONE_OS_DNS env var (comma-separated) overrides everything.
 
 Only stdlib; usage endpoints are simple GETs (no redirects expected).
 """
 import http.client
+import json
 import os
 import random
 import socket
@@ -26,19 +32,58 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from app import db
+
 MAX_BODY = 262144      # bytes read per response (same cap as before)
 DNS_TIMEOUT = 2.0      # seconds per resolver
 CACHE_TTL = 300        # seconds a resolved IP is reused
+SETTING_KEY = "dns_fallback"
+
+# {addr, enabled} rows; enabled ones are queried in list order.
+DEFAULT_RESOLVERS = [
+    {"addr": "223.5.5.5", "enabled": True},     # AliDNS — works in China
+    {"addr": "119.29.29.29", "enabled": True},  # DNSPod — works in China
+    {"addr": "1.1.1.1", "enabled": False},      # Cloudflare
+    {"addr": "8.8.8.8", "enabled": False},      # Google
+    {"addr": "9.9.9.9", "enabled": False},      # Quad9
+]
 
 _CACHE = {}            # host -> (ip, expires_at)
 _LOCK = threading.Lock()
+
+
+def default_dns_json():
+    """The shipped resolver list as a JSON string (settings default)."""
+    return json.dumps(DEFAULT_RESOLVERS)
+
+
+def configured_resolvers():
+    """The user's resolver list from Settings; defaults when unset or
+    unreadable. Never raises — a corrupt row must not kill probes."""
+    try:
+        raw = db.get_setting(SETTING_KEY, None)
+        rows = json.loads(raw) if raw else None
+        if isinstance(rows, list):
+            clean = []
+            for row in rows:
+                if isinstance(row, dict) and row.get("addr") and \
+                        isinstance(row.get("enabled"), bool):
+                    clean.append({"addr": str(row["addr"])[:64],
+                                  "enabled": row["enabled"]})
+            return clean
+    except Exception:
+        pass
+    return [dict(r) for r in DEFAULT_RESOLVERS]
 
 
 def _resolvers():
     env = os.environ.get("ONE_OS_DNS", "")
     if env.strip():
         return [s.strip() for s in env.split(",") if s.strip()]
-    return ["223.5.5.5", "119.29.29.29"]     # AliDNS / DNSPod, globally reachable
+    enabled = [r["addr"] for r in configured_resolvers() if r["enabled"]]
+    if enabled:
+        return enabled
+    return [r["addr"] for r in DEFAULT_RESOLVERS if r["enabled"]]
 
 
 # --- minimal DNS client (A records only) ------------------------------------------

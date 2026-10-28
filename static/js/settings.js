@@ -34,6 +34,7 @@
     initRulesPane(win);
     initOfficePane(win);
     initAiPane(win);
+    initNetworkPane(win);
     initLimitsPane(win);
   };
 
@@ -142,6 +143,73 @@
         load();
       });
     });
+  }
+
+  // ================= Network (DNS fallback resolvers) =================
+  function initNetworkPane(win) {
+    var pane = OS.$('[data-pane="network"]', win.body);
+    var tbody = OS.$('.dns-tbody', pane);
+
+    function row(item) {
+      var tr = OS.el('tr');
+      var tdEn = OS.el('td');
+      var cb = OS.el('input');
+      cb.type = 'checkbox';
+      cb.checked = !!item.enabled;
+      tdEn.appendChild(cb);
+      tr.appendChild(tdEn);
+      var tdAddr = OS.el('td');
+      var inp = OS.el('input', 'mono');
+      inp.value = item.addr;
+      inp.style.width = '160px';
+      tdAddr.appendChild(inp);
+      tr.appendChild(tdAddr);
+      var tdAct = OS.el('td');
+      var del = OS.el('button', 'btn btn-sm btn-danger');
+      del.appendChild(OS.icon('close'));
+      del.addEventListener('click', function () { tr.remove(); });
+      tdAct.appendChild(del);
+      tr.appendChild(tdAct);
+      return tr;
+    }
+
+    function render(list) {
+      tbody.innerHTML = '';
+      (list || []).forEach(function (item) {
+        tbody.appendChild(row(item));
+      });
+    }
+
+    function load() {
+      OS.api('/api/settings').then(function (s) {
+        render(s.dns_fallback || []);
+      });
+    }
+
+    OS.$('.dns-add', pane).addEventListener('click', function () {
+      var addr = OS.$('.dns-new-addr', pane).value.trim();
+      if (!addr) return;
+      tbody.appendChild(row({addr: addr, enabled: true}));
+      OS.$('.dns-new-addr', pane).value = '';
+    });
+
+    OS.$('.dns-save', pane).addEventListener('click', function () {
+      var list = [];
+      tbody.querySelectorAll('tr').forEach(function (tr) {
+        list.push({
+          addr: tr.querySelector('input.mono').value.trim(),
+          enabled: tr.querySelector('input[type=checkbox]').checked
+        });
+      });
+      OS.api('/api/settings', {method: 'PUT',
+        body: {dns_fallback: list}}).then(function (res) {
+        if (res.error) { OS.toast(res.error, true); return; }
+        OS.toast(OS.t('ss_saved'));
+        render(res.dns_fallback);
+      });
+    });
+
+    load();
   }
 
   // ================= Input & Keyboard =================

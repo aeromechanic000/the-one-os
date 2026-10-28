@@ -6,6 +6,7 @@
       <button data-tab="rules">{{ t('sec_attention') }}</button>
       <button data-tab="office">{{ t('sec_office') }}</button>
       <button data-tab="ai">{{ t('sec_ai') }}</button>
+      <button data-tab="network">{{ t('sec_network') }}</button>
       <button data-tab="limits">{{ t('sec_limits') }}</button>
     </div>
     <div class="settings-body">
@@ -93,6 +94,28 @@
           <input type="password" class="ai-api-key" autocomplete="new-password">
           <div class="settings-hint ai-key-state">{{ t('ai_api_key_optional') }}</div>
           <button class="btn btn-primary ai-save" style="margin-top: 10px">{{ t('ai_save') }}</button>
+        </div>
+      </section>
+
+      <section data-pane="network" hidden>
+        <div class="settings-section">
+          <h3>{{ t('dns_title') }}</h3>
+          <div class="settings-hint">{{ t('dns_hint') }}</div>
+          <table class="tbl dns-table">
+            <thead>
+              <tr>
+                <th>{{ t('dns_enabled') }}</th>
+                <th>{{ t('dns_addr') }}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody class="dns-tbody"></tbody>
+          </table>
+          <div class="form-row" style="margin-top: 8px; align-items: center">
+            <input type="text" class="dns-new-addr" placeholder="223.5.5.5" style="width: 180px">
+            <button class="btn btn-sm dns-add">{{ t('dns_add') }}</button>
+          </div>
+          <button class="btn btn-primary dns-save" style="margin-top: 10px">{{ t('save') }}</button>
         </div>
       </section>
 

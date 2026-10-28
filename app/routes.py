@@ -1,12 +1,13 @@
 """Core HTTP routes: login/logout, desktop shell, session info, settings,
 terminal list, and the attention-rules REST API (IDEA.md §3.4, §6.2, §7.7).
 """
+import ipaddress
 import json
 
 from flask import Blueprint, jsonify, redirect, render_template, request, \
     session
 
-from app import activation, ai, auth, db, history
+from app import activation, ai, auth, db, history, netfetch
 from app import attention_rules
 from app.i18n import t
 from app.ssh_manager import manager
@@ -27,6 +28,7 @@ SETTINGS_KEYS = {
     "max_single_file_mb",     # single-file cap for transfers/uploads/preview
     "max_storage_mb",         # total storage/ quota for the file browser
     "theme",                  # color theme id (registry in static/js/theme.js)
+    "dns_fallback",           # JSON: [{addr, enabled}] — netfetch resolvers
 }
 SETTINGS_DEFAULTS = {
     "keyboard_mode": "windows",
@@ -41,6 +43,7 @@ SETTINGS_DEFAULTS = {
     "max_single_file_mb": "512",
     "max_storage_mb": "2048",
     "theme": "midnight",
+    "dns_fallback": netfetch.default_dns_json(),
 }
 
 # keep in sync with THEMES in static/js/theme.js
@@ -126,6 +129,10 @@ def get_settings():
         out["custom_keys"] = json.loads(out.get("custom_keys") or "[]")
     except ValueError:
         out["custom_keys"] = []
+    try:
+        out["dns_fallback"] = json.loads(out.get("dns_fallback") or "[]")
+    except ValueError:
+        out["dns_fallback"] = json.loads(netfetch.default_dns_json())
     # never leak the API key ciphertext; expose set/re-entry flags instead
     enc = out.pop("ai_api_key_enc", "")
     out["ai_api_key_set"] = bool(enc)
@@ -153,7 +160,25 @@ def put_settings():
     for key, value in data.items():
         if key not in SETTINGS_KEYS or key == "ai_api_key_enc":
             continue
-        if key == "custom_keys":
+        if key == "dns_fallback":
+            if not isinstance(value, list) or not 1 <= len(value) <= 10:
+                return jsonify({"error": t("set_bad_dns")}), 400
+            clean, seen = [], set()
+            for item in value:
+                if not isinstance(item, dict):
+                    return jsonify({"error": t("set_bad_dns")}), 400
+                addr = str(item.get("addr") or "").strip()
+                try:
+                    addr = str(ipaddress.IPv4Address(addr))
+                except ValueError:
+                    return jsonify({"error": t("set_bad_dns")}), 400
+                if addr in seen:
+                    return jsonify({"error": t("set_bad_dns")}), 400
+                seen.add(addr)
+                clean.append({"addr": addr,
+                              "enabled": bool(item.get("enabled"))})
+            value = json.dumps(clean)
+        elif key == "custom_keys":
             if not isinstance(value, list):
                 continue
             clean = []
