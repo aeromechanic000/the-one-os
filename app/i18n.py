@@ -86,6 +86,8 @@ EN = {
     "aiu_key_valid": "Key check",
     "aiu_balance": "Balance",
     "aiu_usage": "Usage",
+    "aiu_used": "Used",
+    "aiu_resets_in": "resets in {span}",
     "aiu_5h_used": "5-hour window used, %",
     "aiu_5h_left": "5-hour window left, %",
     "aiu_weekly_left": "Weekly limit remaining",

@@ -27,6 +27,7 @@ normalized `metrics` where possible plus an honest `note`/`error`.
 import json
 import re
 import time
+from datetime import datetime
 
 from flask import Blueprint, jsonify, request
 
@@ -68,6 +69,7 @@ PROVIDER_TEMPLATES = {
         "usage_url": "https://api.anthropic.com/api/oauth/usage",
         "extract_path": "five_hour.utilization",
         "metric_key": "aiu_5h_used",
+        "parser": "claude",
     },
     "deepseek": {
         "name_key": "aiu_p_deepseek",
@@ -84,6 +86,7 @@ PROVIDER_TEMPLATES = {
         "usage_url": "https://open.bigmodel.cn/api/monitor/usage/quota/limit",
         "extract_path": "data.limits[unit=3].percentage",
         "metric_key": "aiu_5h_used",
+        "parser": "glm",
     },
     "glm_intl": {
         "name_key": "aiu_p_glm_intl",
@@ -92,6 +95,7 @@ PROVIDER_TEMPLATES = {
         "usage_url": "https://api.z.ai/api/monitor/usage/quota/limit",
         "extract_path": "data.limits[unit=3].percentage",
         "metric_key": "aiu_5h_used",
+        "parser": "glm",
     },
     "kimi": {   # Kimi For Coding
         "name_key": "aiu_p_kimi",
@@ -100,6 +104,7 @@ PROVIDER_TEMPLATES = {
         "usage_url": "https://api.kimi.com/coding/v1/usages",
         "extract_path": "usage.remaining",
         "metric_key": "aiu_weekly_left",
+        "parser": "kimi",
     },
     "kimi_global": {
         "name_key": "aiu_p_kimi_global",
@@ -108,6 +113,7 @@ PROVIDER_TEMPLATES = {
         "usage_url": "https://api.kimi.ai/coding/v1/usages",
         "extract_path": "usage.remaining",
         "metric_key": "aiu_weekly_left",
+        "parser": "kimi",
     },
     "moonshot": {   # Moonshot pay-as-you-go platform key
         "name_key": "aiu_p_moonshot",
@@ -125,6 +131,7 @@ PROVIDER_TEMPLATES = {
         "extract_path":
             "model_remains[model_name=general].current_interval_remaining_percent",
         "metric_key": "aiu_5h_left",
+        "parser": "minimax",
     },
     "minimax_intl": {
         "name_key": "aiu_p_minimax_intl",
@@ -134,6 +141,7 @@ PROVIDER_TEMPLATES = {
         "extract_path":
             "model_remains[model_name=general].current_interval_remaining_percent",
         "metric_key": "aiu_5h_left",
+        "parser": "minimax",
     },
 }
 
@@ -233,6 +241,144 @@ def _fmt(value):
     return str(value)
 
 
+# --- provider quota parsers --------------------------------------------------------
+# Templates whose usage endpoint returns windowed quotas (coding plans,
+# subscriptions) parse into one percentage metric per window, mirroring the
+# providers' own dashboards. A parser that yields nothing falls back to the
+# generic extract path, so edited and custom configs keep working.
+
+def _num(v):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _fmt_pct(v):
+    return ("%.1f" % v).rstrip("0").rstrip(".") + "%"
+
+
+def _reset_str(value):
+    """'resets in 2h13m' from an epoch (seconds or ms) or ISO string."""
+    seconds = None
+    if isinstance(value, (int, float)) and value > 0:
+        seconds = value / 1000.0 if value >= 1e12 else float(value)
+    elif isinstance(value, str) and value[:2] == "20":
+        try:
+            seconds = datetime.fromisoformat(
+                value.replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            return ""
+    if not seconds:
+        return ""
+    minutes = int((seconds - time.time()) / 60)
+    if minutes <= 0:
+        return ""
+    h, m = divmod(minutes, 60)
+    span = ("%dh%02dm" % (h, m)) if h else "%dm" % m
+    return t("aiu_resets_in", span=span)
+
+
+def _quota_metric(pct, reset, window):
+    value = _fmt_pct(pct)
+    reset = _reset_str(reset)
+    if reset:
+        value += " · " + reset
+    return _metric(t("aiu_used"), value, window=window)
+
+
+def _parse_kimi(data):
+    """{limits: [{detail: {limit, remaining, resetTime}}], usage: {...}}"""
+    metrics = []
+    if not isinstance(data, dict):
+        return metrics
+    limits = data.get("limits")
+    if isinstance(limits, list) and limits and isinstance(limits[0], dict):
+        d = limits[0].get("detail")
+        if isinstance(d, dict):
+            limit, remaining = _num(d.get("limit")), _num(d.get("remaining"))
+            if limit and limit > 0 and remaining is not None:
+                metrics.append(_quota_metric(
+                    (limit - remaining) / limit * 100.0,
+                    d.get("resetTime"), "5h"))
+    u = data.get("usage")
+    if isinstance(u, dict):
+        limit, remaining = _num(u.get("limit")), _num(u.get("remaining"))
+        if limit and limit > 0 and remaining is not None:
+            metrics.append(_quota_metric(
+                (limit - remaining) / limit * 100.0,
+                u.get("resetTime"), "7d"))
+    return metrics
+
+
+def _parse_claude(data):
+    """{five_hour: {utilization, resets_at}, seven_day: {...}} — percents."""
+    metrics = []
+    if not isinstance(data, dict):
+        return metrics
+    for key, window in (("five_hour", "5h"), ("seven_day", "7d")):
+        w = data.get(key)
+        if isinstance(w, dict) and _num(w.get("utilization")) is not None:
+            metrics.append(_quota_metric(_num(w["utilization"]),
+                                         w.get("resets_at"), window))
+    return metrics
+
+
+def _parse_minimax(data):
+    """model_remains[] — the model_name=general entry; remaining percents."""
+    metrics = []
+    if not isinstance(data, dict):
+        return metrics
+    remains = data.get("model_remains")
+    item = next((r for r in (remains or []) if isinstance(r, dict)
+                 and r.get("model_name") == "general"), None)
+    if not item:
+        return metrics
+    pct = _num(item.get("current_interval_remaining_percent"))
+    if pct is not None:
+        metrics.append(_quota_metric(100.0 - pct,
+                                     item.get("end_time"), "5h"))
+    if item.get("current_weekly_status") == 1:
+        wpct = _num(item.get("current_weekly_remaining_percent"))
+        if wpct is not None:
+            metrics.append(_quota_metric(100.0 - wpct,
+                                         item.get("weekly_end_time"), "7d"))
+    return metrics
+
+
+def _parse_glm(data):
+    """data.limits[] — unit 3 = 5-hour window, unit 6 = weekly; used %."""
+    metrics = []
+    if not isinstance(data, dict):
+        return metrics
+    data = data.get("data")
+    limits = data.get("limits") if isinstance(data, dict) else None
+    by_unit = {}
+    for item in (limits or []):
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("type", "")).upper() not in ("TOKENS_LIMIT",
+                                                     "CREDIT_LIMIT"):
+            continue
+        unit = item.get("unit")
+        if unit in (3, 6) and unit not in by_unit:
+            by_unit[unit] = item
+    for unit, window in ((3, "5h"), (6, "7d")):
+        item = by_unit.get(unit)
+        if item and _num(item.get("percentage")) is not None:
+            metrics.append(_quota_metric(_num(item["percentage"]),
+                                         item.get("nextResetTime"), window))
+    return metrics
+
+
+QUOTA_PARSERS = {
+    "kimi": _parse_kimi,
+    "claude": _parse_claude,
+    "minimax": _parse_minimax,
+    "glm": _parse_glm,
+}
+
+
 def _with_dns_hint(text):
     """Append an actionable hint when the failure is hostname resolution."""
     low = text.lower()
@@ -245,7 +391,7 @@ def _with_dns_hint(text):
 
 # --- generic probe ----------------------------------------------------------------
 
-def probe(cfg, token, metric_key=""):
+def probe(cfg, token, metric_key="", parser=""):
     """Run one usage check against the token's config. Never raises."""
     metrics, note = [], ""
     headers = _auth_headers(cfg, token)
@@ -253,7 +399,11 @@ def probe(cfg, token, metric_key=""):
     if cfg["usage_url"]:
         try:
             data = _get_json(cfg["usage_url"], headers)
-            if cfg["extract_path"]:
+            parsed = QUOTA_PARSERS[parser](data) if parser in QUOTA_PARSERS \
+                else []
+            if parsed:
+                metrics.extend(parsed)
+            elif cfg["extract_path"]:
                 found, value = _extract(data, cfg["extract_path"])
                 if found:
                     metrics.append(_metric(t(metric_key or "aiu_usage"),
@@ -422,10 +572,10 @@ def check_token(tid):
     except Exception:
         return jsonify({"error": t("aiu_key_needs_reentry")}), 500
     cfg = {k: row[k] for k in EDITABLE_FIELDS}
-    metric_key = PROVIDER_TEMPLATES.get(row["provider"], {}) \
-        .get("metric_key", "")
+    template = PROVIDER_TEMPLATES.get(row["provider"], {})
     try:
-        result = probe(cfg, token, metric_key)
+        result = probe(cfg, token, template.get("metric_key", ""),
+                       template.get("parser", ""))
     except Exception as exc:   # probe guards itself; belt and braces
         result = _fail(str(exc))
     db.execute(
