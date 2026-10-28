@@ -449,7 +449,11 @@ button.tb-chip:hover { background: var(--win-2); color: var(--text); }
 .hosts-table-wrap { flex: 1 1 auto; overflow: auto; padding: 0 10px 10px; }
 .host-status-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
 .host-needs-pw { color: var(--attention); font-size: 12px; }
-.host-form { padding: 4px 10px 10px; overflow-y: auto; }
+/* Form panes (hosts, AI tokens): the pane carries the horizontal padding
+   so action buttons appended beside the form align with its inputs and
+   keep space from the window border. */
+.host-form-pane { padding: 0 10px 12px; }
+.host-form { padding: 4px 0 10px; overflow-y: auto; }
 .local-chip {
   font-size: 10px; padding: 1px 6px; border-radius: 4px;
   margin-left: 6px; text-transform: uppercase; letter-spacing: 0.03em;
