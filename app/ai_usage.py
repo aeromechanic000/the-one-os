@@ -347,13 +347,16 @@ def _parse_minimax(data):
 
 
 def _parse_glm(data):
-    """data.limits[] — unit 3 = 5-hour window, unit 6 = weekly; used %."""
+    """data.limits[] — unit 3 = 5-hour window, unit 6 = weekly; used %.
+    Entries without a recognizable unit fall back to the reset-time
+    heuristic cc-switch uses: no reset time -> 5-hour first, then earliest
+    reset, filling whichever window slot is still empty."""
     metrics = []
     if not isinstance(data, dict):
         return metrics
     data = data.get("data")
     limits = data.get("limits") if isinstance(data, dict) else None
-    by_unit = {}
+    by_unit, unclassified = {}, []
     for item in (limits or []):
         if not isinstance(item, dict):
             continue
@@ -363,6 +366,19 @@ def _parse_glm(data):
         unit = item.get("unit")
         if unit in (3, 6) and unit not in by_unit:
             by_unit[unit] = item
+        else:
+            unclassified.append(item)
+
+    def reset_key(it):
+        r = it.get("nextResetTime")
+        has = isinstance(r, (int, float)) and r > 0
+        return (has, r if isinstance(r, (int, float)) else 0)
+
+    for item in sorted(unclassified, key=reset_key):
+        if 3 not in by_unit:
+            by_unit[3] = item
+        elif 6 not in by_unit:
+            by_unit[6] = item
     for unit, window in ((3, "5h"), (6, "7d")):
         item = by_unit.get(unit)
         if item and _num(item.get("percentage")) is not None:
