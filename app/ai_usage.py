@@ -288,26 +288,52 @@ def _quota_metric(pct, reset, window):
 
 
 def _parse_kimi(data):
-    """{limits: [{detail: {limit, remaining, resetTime}}], usage: {...}}"""
+    """Kimi /coding/v1/usages comes in overlapping shapes:
+    - usages: {limit_5h: {used_ratio, reset_time}, limit_7d: {...}} — explicit
+      ratios (newest shape; preferred when present)
+    - limits: [{detail: {limit, used|remaining, resetTime}}] — the 5-hour
+      window; `remaining` is omitted when it hits zero (exhausted window),
+      so `used` is authoritative when present
+    - usage: {limit, used|remaining, resetTime} — the weekly window"""
     metrics = []
     if not isinstance(data, dict):
         return metrics
-    limits = data.get("limits")
-    if isinstance(limits, list) and limits and isinstance(limits[0], dict):
-        d = limits[0].get("detail")
-        if isinstance(d, dict):
-            limit, remaining = _num(d.get("limit")), _num(d.get("remaining"))
-            if limit and limit > 0 and remaining is not None:
+    us = data.get("usages")
+    if isinstance(us, dict):
+        for key, window in (("limit_5h", "5h"), ("limit_7d", "7d")):
+            w = us.get(key)
+            if isinstance(w, dict) and _num(w.get("used_ratio")) is not None:
                 metrics.append(_quota_metric(
-                    (limit - remaining) / limit * 100.0,
-                    d.get("resetTime"), "5h"))
+                    _num(w["used_ratio"]) * 100.0,
+                    w.get("reset_time"), window))
+        if metrics:
+            return metrics
+    limits = data.get("limits")
+    if isinstance(limits, list):
+        for entry in limits:
+            d = entry.get("detail") if isinstance(entry, dict) else None
+            if not isinstance(d, dict):
+                continue
+            limit, used = _num(d.get("limit")), _num(d.get("used"))
+            remaining = _num(d.get("remaining"))
+            if not limit or limit <= 0:
+                continue
+            if used is None and remaining is not None:
+                used = limit - remaining
+            if used is not None:
+                metrics.append(_quota_metric(used / limit * 100.0,
+                                             d.get("resetTime"), "5h"))
+                break
     u = data.get("usage")
     if isinstance(u, dict):
-        limit, remaining = _num(u.get("limit")), _num(u.get("remaining"))
-        if limit and limit > 0 and remaining is not None:
-            metrics.append(_quota_metric(
-                (limit - remaining) / limit * 100.0,
-                u.get("resetTime"), "7d"))
+        limit, used = _num(u.get("limit")), _num(u.get("used"))
+        remaining = _num(u.get("remaining"))
+        if limit and limit > 0:
+            if used is None and remaining is not None:
+                used = limit - remaining
+            if used is not None:
+                metrics.append(_quota_metric(used / limit * 100.0,
+                                             u.get("resetTime"), "7d"))
     return metrics
 
 
