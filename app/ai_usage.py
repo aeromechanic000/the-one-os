@@ -27,13 +27,10 @@ normalized `metrics` where possible plus an honest `note`/`error`.
 import json
 import re
 import time
-import urllib.error
-import urllib.request
-from urllib.parse import urlparse
 
 from flask import Blueprint, jsonify, request
 
-from app import db, history
+from app import db, history, netfetch
 from app.i18n import t
 from config import AI_TOKEN_FERNET
 
@@ -156,22 +153,10 @@ def provider_meta():
 # --- HTTP + extraction helpers ---------------------------------------------------
 
 def _get_json(url, headers):
-    """GET and parse JSON; raises RuntimeError with a short reason."""
-    req = urllib.request.Request(url, headers=headers or {}, method="GET")
-    try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
-            raw = resp.read(262144).decode("utf-8", "replace")
-    except urllib.error.HTTPError as exc:
-        try:
-            detail = exc.read().decode("utf-8", "replace")[:200]
-        except Exception:
-            detail = ""
-        raise RuntimeError("HTTP %d %s" % (exc.code, detail.strip()))
-    except (urllib.error.URLError, OSError) as exc:
-        # keep the failing host in the message — "<urlopen error [Errno -2]
-        # Name or service not known>" alone doesn't say which endpoint died
-        reason = str(getattr(exc, "reason", exc) or exc)[:160]
-        raise RuntimeError("%s [%s]" % (reason, urlparse(url).netloc))
+    """GET and parse JSON; raises RuntimeError with a short reason.
+    Transport goes through app/netfetch.py, which retries past a broken
+    system resolver (Tailscale MagicDNS) via direct DNS."""
+    raw = netfetch.open_url(url, headers, TIMEOUT)
     try:
         return json.loads(raw)
     except ValueError:
