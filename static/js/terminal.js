@@ -1,6 +1,7 @@
 /* terminal.js — xterm windows over SocketIO, reattach replay, status bar,
-   latency, selection → notepad store, paste, visualViewport keyboard
-   avoidance (IDEA.md §6.3, §4.3). */
+   latency, selection → clipboard + notepad store, copy/paste keys,
+   wheel-scroll fix, host-bound Quick Actions / Files shortcuts,
+   visualViewport keyboard avoidance (IDEA.md §6.3, §4.3). */
 (function () {
   'use strict';
   var OS = window.OS;
@@ -158,17 +159,30 @@
       term.sendInput(sid, data);
     });
 
-    // selection → notepad store + clipboard attempt
+    // selection → notepad store + system clipboard (best effort: selecting
+    // text is copying it, like a native terminal)
     xterm.onSelectionChange(function () {
       var sel = xterm.getSelection();
-      if (sel) OS.bus.emit('selection', {sid: sid, text: sel});
+      if (sel) {
+        OS.bus.emit('selection', {sid: sid, text: sel});
+        copyText(sel);
+      }
     });
 
-    // paste: Ctrl+Shift+V / Cmd+V / right-click (IDEA.md §6.4)
+    // clipboard (IDEA.md §6.4): paste via Ctrl+V / Ctrl+Shift+V / Cmd+V /
+    // right-click; copy via Ctrl+C / Ctrl+Shift+C / Cmd+C while text is
+    // selected — without a selection Ctrl+C still sends the interrupt.
     xterm.attachCustomKeyEventHandler(function (ev) {
       if (ev.type !== 'keydown') return true;
-      if (ev.key === 'v' && ev.ctrlKey && ev.shiftKey) { doPaste(); return false; }
-      if (ev.key === 'v' && ev.metaKey) { doPaste(); return false; }
+      if (ev.key === 'v' && !ev.altKey && (ev.ctrlKey || ev.metaKey)) {
+        doPaste();
+        return false;
+      }
+      if (ev.key === 'c' && !ev.altKey && (ev.ctrlKey || ev.metaKey) &&
+          xterm.hasSelection()) {
+        doCopy();
+        return false;
+      }
       return true;
     });
     screen.addEventListener('contextmenu', function (e) {
@@ -176,8 +190,25 @@
       doPaste();
     });
     function doPaste() {
+      xterm.focus();
       pasteInto(sid);
     }
+    function doCopy() {
+      copyText(xterm.getSelection());
+    }
+
+    // xterm.js maps the wheel to arrow keys whenever the active buffer
+    // reports no scrollback — which is also true of a normal buffer that
+    // has not yet filled one screen, making the wheel walk shell history
+    // instead of scrolling. Swallow the wheel when there is nothing to
+    // scroll; real scrollback and alternate-screen apps (vim/less) keep
+    // xterm's own handling.
+    screen.addEventListener('wheel', function (e) {
+      var buf = xterm.buffer.active;
+      if (buf.type === 'alternate' || buf.length > xterm.rows) return;
+      e.preventDefault();
+      e.stopPropagation();
+    }, {capture: true, passive: false});
 
     // drag & drop paste from notepad (desktop/tablet, IDEA.md §6.4)
     screen.addEventListener('dragover', function (e) { e.preventDefault(); });
@@ -192,6 +223,23 @@
     var latEl = $('.term-latency', win.body);
     var attEl = $('.term-attention', win.body);
     applyState(s, s.state);
+
+    // host-bound shortcuts: Quick Actions and the file browser open with
+    // this terminal's host preselected, so no host picking is needed
+    var actionsBtn = $('.term-actions', win.body);
+    var filesBtn = $('.term-files', win.body);
+    actionsBtn.title = OS.t('ctx_quick_actions');
+    actionsBtn.setAttribute('aria-label', actionsBtn.title);
+    actionsBtn.appendChild(OS.icon('bolt'));
+    actionsBtn.addEventListener('click', function () {
+      if (OS.actions) OS.actions.open(win.opts.hostId);
+    });
+    filesBtn.title = OS.t('ctx_browse_files');
+    filesBtn.setAttribute('aria-label', filesBtn.title);
+    filesBtn.appendChild(OS.icon('folder'));
+    filesBtn.addEventListener('click', function () {
+      OS.files.open({hostId: win.opts.hostId});
+    });
 
     // latency probe
     var latTimer = setInterval(function () {
@@ -268,14 +316,21 @@
     stateEl.className = 'term-state ' + m[1];
   }
 
+  function copyText(text) {
+    if (!text || !navigator.clipboard || !navigator.clipboard.writeText) return;
+    try {
+      navigator.clipboard.writeText(text).catch(function () {});
+    } catch (e) { /* no clipboard access — selection stays in the store */ }
+  }
+
   function pasteInto(sid) {
     function send(text) { if (text) term.sendInput(sid, text); }
     if (navigator.clipboard && navigator.clipboard.readText) {
       navigator.clipboard.readText().then(send).catch(function () {
-        OS.toast('Clipboard unavailable', true);
+        OS.toast(OS.t('term_clipboard_fail'), true);
       });
     } else {
-      OS.toast('Clipboard unavailable', true);
+      OS.toast(OS.t('term_clipboard_fail'), true);
     }
   }
 

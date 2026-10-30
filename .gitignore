@@ -226,3 +226,5 @@ webos.db
 webos.db-*
 .DS_Store
 ai_tokens.key
+session.key
+boot_id.key

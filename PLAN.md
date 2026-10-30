@@ -55,7 +55,8 @@ GET     /api/attention/rules/export   POST /api/attention/rules/import
 GET/PUT /api/settings           key–value store (incl. ai_base_url, ai_model,
                                 ai_api_key [write-only], history_days,
                                 max_single_file_mb, max_storage_mb, theme
-                                [color theme id, registry in theme.js])
+                                [color theme id, registry in theme.js],
+                                aiu_autorefresh [minutes, 0 = off])
 POST    /api/ai/chat            {messages:[{role,content}]} → {reply} | 400/502
                                 (OpenAI-compatible proxy; injects a 7-day
                                 operation-history digest as context)
@@ -146,6 +147,17 @@ Server→client: `terminal_output {sid,data}`, `terminal_meta {sid,host_id,name,
 
 ## Progress log
 
+- 2026-10-30 — Usability batch: AI usage monitor auto-refresh (interval in
+  Settings → AI, `aiu_autorefresh`, 0 = off) with template quick-fill made
+  visually explicit (accent tint + "paste the token" note). Terminal
+  clipboard: selection auto-copies, Ctrl+C/Ctrl+Shift+C/Cmd+C copy,
+  Ctrl+V/Ctrl+Shift+V/Cmd+V/right-click paste. Wheel no longer walks shell
+  history on a not-yet-full screen (xterm's no-scrollback arrow mapping
+  swallowed in the normal buffer). Terminal status bar gained host-bound
+  Quick Actions + Files buttons (`OS.actions.open`). Sessions survive
+  restarts: SECRET_KEY/BOOT_ID persisted next to the DB (0600), cookie
+  lifetime aligned to the 7-day cap; background threads now also start
+  under gunicorn (create_app calls start_background).
 - 2026-10-21 — Plan created; execution begins.
 - 2026-10-21 — Phases 1-10 + wrap-up implemented in one pass (backend modules
   per §6, responsive shell, all window types, vendored frontend libs).

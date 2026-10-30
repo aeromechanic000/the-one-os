@@ -33,6 +33,8 @@
   .file-size { width: 64px; }
   .file-mtime { display: none; }
   .menu-item { min-height: 46px; }
+  /* status bar hosts the actions/files buttons — give them 44px room */
+  .term-statusbar { height: 48px; }
 
   /* stacked panes */
   .actions-wrap { flex-direction: column; }

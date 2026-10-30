@@ -95,6 +95,13 @@
           <div class="settings-hint ai-key-state">{{ t('ai_api_key_optional') }}</div>
           <button class="btn btn-primary ai-save" style="margin-top: 10px">{{ t('ai_save') }}</button>
         </div>
+        <div class="settings-section">
+          <h3>{{ t('menu_ai_usage') }}</h3>
+          <label class="field-label">{{ t('aiu_autorefresh_label') }}</label>
+          <input type="number" class="aiu-autorefresh" min="0" max="1440" step="1">
+          <div class="settings-hint">{{ t('aiu_autorefresh_hint') }}</div>
+          <button class="btn btn-primary aiusage-save" style="margin-top: 10px">{{ t('save') }}</button>
+        </div>
       </section>
 
       <section data-pane="network" hidden>

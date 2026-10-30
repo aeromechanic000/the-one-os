@@ -9,7 +9,7 @@ Guidance for Claude Code working in this repository. The full design specificati
 Hard constraints (from IDEA.md §1):
 
 - **Single user.** No multi-tenancy, no registration, no permission system.
-- **No persistent identity.** Password is random per boot (`secrets.token_urlsafe(12)`), printed to console, memory-only. Sessions ≤ 7 days; restart invalidates everything.
+- **No persistent identity.** Password is random per boot (`secrets.token_urlsafe(12)`), printed to console, memory-only. Sessions ≤ 7 days and survive restarts (`session.key`/`boot_id.key` persisted next to the DB, like `ai_tokens.key`); host-password encryption stays per-boot (re-entry after restart).
 - **English-first UI.** Every user-facing string goes through `app/i18n.py` (`t()` in Jinja, `window.I18N` in JS). No runtime language switching. Never hardcode English copy in templates/JS — add a key to the dictionary.
 - **Files viewable in-system** (preview for images/video/audio/PDF/text/Markdown/Office/archives).
 
@@ -50,7 +50,7 @@ Python 3.11+ (developed on 3.14), Flask + Flask-SocketIO (`async_mode='threading
 Backend (single Flask process + background threads):
 
 - `main.py` — entry: argparse (`--host/--port/--debug`), prints password, starts SocketIO.
-- `config.py` — paths, per-boot runtime secrets (password, SECRET_KEY, BOOT_ID), Fernet key.
+- `config.py` — paths, per-boot secrets (password, host-password Fernet key) and persisted session secrets (SECRET_KEY, BOOT_ID).
 - `app/__init__.py` — `create_app()` factory, DB init, background threads (monitor, cleanup).
 - `app/db.py` — sqlite helpers (thread-safe), schema init.
 - `app/i18n.py` — the English copy dictionary `EN` + `t(key, **kwargs)`.

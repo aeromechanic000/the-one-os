@@ -1,8 +1,8 @@
 """Authentication and session validation (IDEA.md §6.2).
 
 Single user, memory-only password, BOOT_ID + 7-day double validation in
-before_request. SECRET_KEY is random per boot, so old cookie signatures fail
-immediately after a restart.
+before_request. SECRET_KEY and BOOT_ID persist across restarts (config.py),
+so a login survives service restarts up to its 7-day cap.
 
 Every logged-in browser also carries a frontend identity (client_id +
 client_addr) used by app/activation.py to enforce the single-active-
@@ -48,7 +48,6 @@ def login_session():
     session.permanent = True
     session["boot_id"] = BOOT_ID
     session["login_at"] = time.time()
-    session.permanent_lifetime = SESSION_MAX_AGE
     session["client_id"] = secrets.token_urlsafe(9)
     session["client_addr"] = client_ip()
 

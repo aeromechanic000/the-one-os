@@ -8,6 +8,20 @@
 
   var currentAction = null;
 
+  // Open the (singleton) Quick Actions window, optionally bound to a host —
+  // e.g. from a terminal window's status bar. The fresh-window path picks
+  // the host up from win.opts in winInit below; the already-open path sets
+  // the select directly (wm only calls opts.update on existing windows).
+  OS.actions = {
+    open: function (hostId) {
+      var win = OS.wm.openApp('actions', hostId ? {hostId: hostId} : {});
+      if (!win || !hostId) return;
+      win.opts.hostId = hostId;
+      var sel = $('.actions-host', win.body);
+      if (sel) sel.value = String(hostId);
+    }
+  };
+
   OS.winInit.actions = function (win) {
     var catsEl = $('.actions-cats', win.body);
     var hostSel = $('.actions-host', win.body);
@@ -17,12 +31,14 @@
     var actions = [];
 
     function renderHosts() {
+      var keep = hostSel.value;
       hostSel.innerHTML = '';
       OS.state.hosts.forEach(function (h) {
         var o = OS.el('option', '', h.name);
         o.value = h.id;
         hostSel.appendChild(o);
       });
+      if (keep) hostSel.value = keep;   // keep the choice across refreshes
     }
 
     function renderCats() {
@@ -163,6 +179,8 @@
     OS.winClose.actions = function () { unsub(); };
 
     renderHosts();
+    // opened with a host preselected (terminal status bar / context menu)
+    if (win.opts && win.opts.hostId) hostSel.value = String(win.opts.hostId);
     OS.api('/api/actions').then(function (data) {
       actions = data || [];
       renderCats();

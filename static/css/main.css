@@ -337,6 +337,17 @@ button.tb-chip:hover { background: var(--win-2); color: var(--text); }
 .aiu-error { color: var(--bad); font-size: 12px; margin-top: 4px; }
 .aiu-when { color: var(--text-dim); font-size: 11px; margin-top: 6px; }
 .aiu-empty { color: var(--text-dim); font-size: 13px; padding: 18px; text-align: center; }
+/* quick-filled template values + the "only the token is left" note */
+.aiu-tpl-note {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--accent); border-radius: var(--radius);
+  padding: 7px 10px; font-size: 12px; margin: 8px 0 0;
+}
+input.aiu-template-filled, select.aiu-template-filled {
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-2));
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
 
 /* ---------- terminal window ---------- */
 .term-wrap { display: flex; flex-direction: column; height: 100%; }
@@ -356,6 +367,8 @@ button.tb-chip:hover { background: var(--win-2); color: var(--text); }
 }
 .term-attention::before { content: "● "; }
 .term-spacer { flex: 1 1 auto; }
+.term-actions, .term-files { padding: 2px 9px; }
+.term-statusbar .ico { width: 14px; height: 14px; }
 
 /* ---------- notepad ---------- */
 .notepad-wrap { display: flex; flex-direction: column; height: 100%; }

@@ -68,17 +68,19 @@
     render();
   }
 
-  // ================= AI Assistant =================
+  // ================= AI Assistant + AI Usage Monitor =================
   function initAiPane(win) {
     var pane = OS.$('[data-pane="ai"]', win.body);
     var baseUrl = OS.$('.ai-base-url', pane);
     var model = OS.$('.ai-model', pane);
     var apiKey = OS.$('.ai-api-key', pane);
     var keyState = OS.$('.ai-key-state', pane);
+    var autoRefresh = OS.$('.aiu-autorefresh', pane);
 
     OS.api('/api/settings').then(function (s) {
       baseUrl.value = s.ai_base_url || '';
       model.value = s.ai_model || '';
+      autoRefresh.value = s.aiu_autorefresh != null ? s.aiu_autorefresh : 15;
       if (s.ai_api_key_needs_reentry) {
         keyState.textContent = OS.t('ai_api_key_reenter');
         keyState.classList.add('attention-text');
@@ -105,6 +107,19 @@
         keyState.classList.toggle('attention-text', !!res.ai_api_key_needs_reentry);
         OS.toast(OS.t('ss_saved'));
       });
+    });
+
+    // AI usage monitor auto-refresh interval (minutes, 0 = off); applied
+    // next time the usage monitor window (re)opens
+    OS.$('.aiusage-save', pane).addEventListener('click', function () {
+      var mins = parseInt(autoRefresh.value, 10);
+      if (isNaN(mins) || mins < 0) mins = 0;
+      OS.api('/api/settings', {method: 'PUT', body: {aiu_autorefresh: mins}})
+        .then(function (res) {
+          if (res.error) { OS.toast(res.error, true); return; }
+          autoRefresh.value = res.aiu_autorefresh;
+          OS.toast(OS.t('ss_saved'));
+        });
     });
   }
 

@@ -125,7 +125,9 @@
       });
   }
 
-  function checkAll(win) {
+  function checkAll(win, done) {
+    var btn = OS.$('.aiu-refresh', win.body);
+    if (btn) btn.disabled = true;
     load().then(function (tokens) {
       var chain = Promise.resolve();
       tokens.forEach(function (tok) {
@@ -134,10 +136,29 @@
                         {method: 'POST'});
         }).then(function () { refresh(win); });
       });
-    });
+      return chain;
+    }).catch(function () { /* transient — next cycle retries */ })
+      .then(function () {
+        if (btn && win.el.isConnected) btn.disabled = false;
+        if (done) done();
+      });
   }
 
   // ---------- add / edit form ------------------------------------------------
+
+  // Make quick-filled template values unmistakable: accent tint on the
+  // filled fields plus a note saying only the API token is left to paste.
+  function markTemplate(el, meta) {
+    var on = !!meta;
+    [el.label, el.base_url, el.auth_style, el.usage_url, el.extract_path]
+      .forEach(function (f) { f.classList.toggle('aiu-template-filled', on); });
+    var note = OS.$('.aiu-tpl-note', el);
+    if (note) {
+      note.hidden = !on;
+      if (on) note.textContent = OS.t('aiu_template_applied', {name: meta.name});
+    }
+    if (on) el.token.focus();
+  }
 
   function form(win, existing) {
     var old = OS.$('.aiu-form-pane', win.body);
@@ -174,6 +195,7 @@
         el.auth_style.value = meta ? meta.auth_style : 'bearer';
         el.usage_url.value = meta ? meta.usage_url : '';
         el.extract_path.value = meta ? meta.extract_path : '';
+        markTemplate(el, meta);
       });
     }
 
@@ -220,6 +242,29 @@
 
   // ---------- window hook ------------------------------------------------------
 
+  var autoTimer = null;
+
+  function stopAuto() {
+    if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  }
+
+  // Auto-refresh cadence from the aiu_autorefresh setting (minutes, 0 = off);
+  // runs only while the window is open and the tab is visible.
+  function startAuto(win) {
+    stopAuto();
+    OS.api('/api/settings').then(function (s) {
+      var mins = parseInt(s.aiu_autorefresh, 10);
+      if (!mins || mins < 1 || !win.el.isConnected) return;
+      var busy = false;
+      autoTimer = setInterval(function () {
+        if (!win.el.isConnected) { stopAuto(); return; }
+        if (document.hidden || busy) return;
+        busy = true;
+        checkAll(win, function () { busy = false; });
+      }, mins * 60000);
+    });
+  }
+
   OS.winInit.aiusage = function (win) {
     refresh(win);
     OS.$('.aiu-add', win.body).addEventListener('click', function () {
@@ -228,5 +273,7 @@
     OS.$('.aiu-refresh', win.body).addEventListener('click', function () {
       checkAll(win);
     });
+    startAuto(win);
   };
+  OS.winClose.aiusage = stopAuto;
 })();

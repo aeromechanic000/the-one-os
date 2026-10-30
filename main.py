@@ -5,8 +5,8 @@ Usage:
 
 Default bind 127.0.0.1:11686. Use --host 0.0.0.0 to allow access from all
 addresses. The one-time login password is printed to this console at startup
-and is never persisted: restarting the service invalidates sessions and
-generates a new password.
+and is never persisted: restarting the service generates a new password, but
+signed-in browsers stay signed in for up to 7 days (config.py).
 """
 import argparse
 import os

@@ -8,7 +8,7 @@ Five constraints define the design:
 
 Constraint 1: Single user. No multi-tenancy, no permission system, no user registration. All design is optimized around "this one user's habits."
 
-Constraint 2: No persistent identity. Password is randomly generated at each startup, printed to the console, held only in memory. Session lasts at most 7 days; restarting the program invalidates everything. The system stores no user credentials.
+Constraint 2: No persistent identity. Password is randomly generated at each startup, printed to the console, held only in memory. Session lasts at most 7 days and survives restarts (session secrets persisted on disk); encrypted host passwords keep a per-boot key. The system stores no user credentials.
 
 Constraint 3: Devices are objects, features are tools, screen is a variable. Servers are first-class citizens on the desktop; feature panels are windows serving server operations; layout adapts to screen size and orientation—desktop, tablet, phone landscape, phone portrait are four presentations of the same system.
 
@@ -181,7 +181,7 @@ Production uses gunicorn + eventlet single worker; development uses python main.
 
 6.2 Authentication and Session (auth.py)
 
-Password via secrets.token_urlsafe(12), printed to console, stored in memory. On successful login write boot_id, login_at, session.permanent = True, 7-day validity. before_request double validation (boot_id mismatch / over 7 days → clear session, redirect to login). SECRET_KEY random each startup, old cookie signatures invalid. Login page English prompt: "Password is printed in the server console at startup. Restart the service if you forgot it."
+Password via secrets.token_urlsafe(12), printed to console, stored in memory. On successful login write boot_id, login_at, session.permanent = True, 7-day validity. before_request double validation (boot_id mismatch / over 7 days → clear session, redirect to login). SECRET_KEY/BOOT_ID persisted on disk, so cookie signatures stay valid across restarts within the 7-day window. Login page English prompt: "Password is printed in the server console at startup. Restart the service if you forgot it."
 
 6.3 SSH Terminal (ssh_manager.py + sockets.py)
 
@@ -413,7 +413,7 @@ Wrap-up: styling polish, window layout memory, mobile gestures and performance, 
 
 11. Security Boundaries
 
-Transfer directory chmod 700, transfer logs retained, 24h cleanup. Quick action parameters forced whitelist, command templates only predefined placeholders. Waiting-input rule regex compile cache + input truncation + rule cap 200 + sample test in isolated thread with timeout. Virtual keyboard custom keys sent only as input strings, not rendered through command templates. Preview endpoints all pass session validation + path normalization (.. traversal forbidden) + only transfer directory or current SFTP session authorized paths + SVG via <img> for XSS prevention + Markdown via DOMPurify + LibreOffice conversion isolated temp dir with 30s timeout + archives only read entry names without extraction. Production must use HTTPS. Single user no password recovery, forget = restart. SECRET_KEY random each startup, old cookies invalid, BOOT_ID and 7-day double insurance.
+Transfer directory chmod 700, transfer logs retained, 24h cleanup. Quick action parameters forced whitelist, command templates only predefined placeholders. Waiting-input rule regex compile cache + input truncation + rule cap 200 + sample test in isolated thread with timeout. Virtual keyboard custom keys sent only as input strings, not rendered through command templates. Preview endpoints all pass session validation + path normalization (.. traversal forbidden) + only transfer directory or current SFTP session authorized paths + SVG via <img> for XSS prevention + Markdown via DOMPurify + LibreOffice conversion isolated temp dir with 30s timeout + archives only read entry names without extraction. Production must use HTTPS. Single user no password recovery, forget = restart. SECRET_KEY/BOOT_ID persisted on disk (sessions survive restarts, capped at 7 days); host-password Fernet key stays per-boot.
 
 12. Design Trade-off Summary
 

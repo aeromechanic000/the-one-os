@@ -29,6 +29,7 @@ SETTINGS_KEYS = {
     "max_storage_mb",         # total storage/ quota for the file browser
     "theme",                  # color theme id (registry in static/js/theme.js)
     "dns_fallback",           # JSON: [{addr, enabled}] — netfetch resolvers
+    "aiu_autorefresh",        # minutes between AI-usage auto checks, 0 = off
 }
 SETTINGS_DEFAULTS = {
     "keyboard_mode": "windows",
@@ -44,6 +45,7 @@ SETTINGS_DEFAULTS = {
     "max_storage_mb": "2048",
     "theme": "midnight",
     "dns_fallback": netfetch.default_dns_json(),
+    "aiu_autorefresh": "15",
 }
 
 # keep in sync with THEMES in static/js/theme.js
@@ -221,6 +223,14 @@ def put_settings():
                 if not 1 <= n <= 3650:
                     continue
             elif not 1 <= n <= 102400:
+                continue
+            value = str(n)
+        elif key == "aiu_autorefresh":
+            try:
+                n = int(value)
+            except (TypeError, ValueError):
+                continue
+            if not 0 <= n <= 1440:
                 continue
             value = str(n)
         db.set_setting(key, value)
