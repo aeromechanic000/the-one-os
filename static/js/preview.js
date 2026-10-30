@@ -176,6 +176,9 @@
       fetch(url(opts)).then(function (r) { return r.blob(); }).then(function (blob) {
         var holder = OS.el('div');
         holder.style.background = '#fff';
+        // docx body text has no color of its own and would inherit the
+        // theme's light text on this white page — force dark-on-light
+        holder.style.color = '#1a1a1a';
         holder.style.padding = '12px';
         body.appendChild(holder);
         window.docx.renderAsync(blob, holder).catch(function () {

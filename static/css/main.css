@@ -6,6 +6,9 @@
    variables so they follow the active theme automatically. */
 
 :root {
+  /* native form controls (select popups, scrollbars, spinners) follow the
+     palette; theme blocks below switch it to light where needed */
+  color-scheme: dark;
   --bg: #1e1e2e;
   --bg-2: #252536;
   --bg-grad: #2b2b44;
@@ -100,6 +103,23 @@ input[type="text"], input[type="password"], input[type="number"], select, textar
 }
 input:focus, select:focus, textarea:focus { border-color: var(--accent); }
 textarea { resize: vertical; }
+/* Light background ⇒ dark text, dark background ⇒ light text, everywhere
+   a field can appear — including the places the browser would otherwise
+   repaint with its own colors: */
+/* 1. popup option lists on engines that paint them with author styles
+      (Windows Chrome) — keep the field's own pairing instead of the
+      native white popup under light inherited text */
+select option { background: var(--bg-2); color: var(--text); }
+/* 2. autofill forces a light background; repaint the field and keep the
+      theme's text color on top of it */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  box-shadow: 0 0 0 1000px var(--bg-2) inset;
+}
+/* 3. placeholders: the theme's dim tone, not the browser default */
+input::placeholder, textarea::placeholder { color: var(--text-dim); opacity: 1; }
 table.tbl { width: 100%; border-collapse: collapse; }
 table.tbl th, table.tbl td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
 table.tbl th { color: var(--text-dim); font-weight: 500; font-size: 12px; }
@@ -580,6 +600,7 @@ input.aiu-template-filled, select.aiu-template-filled {
    --divider derives from --border automatically; keep it out of blocks. */
 
 html[data-theme="dracula"] {
+  color-scheme: dark;
   --bg: #282a36; --bg-2: #21222c; --bg-grad: #343746;
   --win: #2b2d3b; --win-2: #363948; --win-3: #44475a; --hover: #4e5162;
   --text: #f8f8f2; --text-dim: #a6abc4;
@@ -591,6 +612,7 @@ html[data-theme="dracula"] {
 }
 
 html[data-theme="nord"] {
+  color-scheme: dark;
   --bg: #2e3440; --bg-2: #292e39; --bg-grad: #3b4252;
   --win: #333b4a; --win-2: #3b4252; --win-3: #434c5e; --hover: #4c566a;
   --text: #eceff4; --text-dim: #a7b1c2;
@@ -602,6 +624,7 @@ html[data-theme="nord"] {
 }
 
 html[data-theme="tokyo"] {
+  color-scheme: dark;
   --bg: #1a1b26; --bg-2: #15161e; --bg-grad: #24283b;
   --win: #1e2130; --win-2: #24283b; --win-3: #2f334d; --hover: #3a3f5c;
   --text: #c0caf5; --text-dim: #7d85b0;
@@ -613,6 +636,7 @@ html[data-theme="tokyo"] {
 }
 
 html[data-theme="solar-dark"] {
+  color-scheme: dark;
   --bg: #002b36; --bg-2: #01212b; --bg-grad: #073642;
   --win: #04303b; --win-2: #0a3f4d; --win-3: #12505e; --hover: #1a5f6e;
   --text: #93a1a1; --text-dim: #657b83;
@@ -624,6 +648,7 @@ html[data-theme="solar-dark"] {
 }
 
 html[data-theme="gruvbox"] {
+  color-scheme: dark;
   --bg: #282828; --bg-2: #232323; --bg-grad: #3c3836;
   --win: #2f2c28; --win-2: #3c3836; --win-3: #504945; --hover: #5c554e;
   --text: #ebdbb2; --text-dim: #a89984;
@@ -635,9 +660,12 @@ html[data-theme="gruvbox"] {
 }
 
 html[data-theme="solar-light"] {
+  color-scheme: light;
   --bg: #eee8d5; --bg-2: #e6dfc8; --bg-grad: #f5efdc;
   --win: #fdf6e3; --win-2: #f2ecd8; --win-3: #e3dcc4; --hover: #d9d1b6;
-  --text: #586e75; --text-dim: #93a1a1;
+  /* base02/base01 instead of base01/base00: field text must be dark on
+     the light field backgrounds, not Solarized's low-contrast midtone */
+  --text: #073642; --text-dim: #586e75;
   --accent: #268bd2; --accent-2: #4ea6de; --accent-ink: #fdf6e3;
   --attention: #b58900; --attention-ink: #241b00; --danger: #b0392e;
   --ok: #748000; --bad: #dc322f; --grey: #93a1a1;
@@ -646,6 +674,7 @@ html[data-theme="solar-light"] {
 }
 
 html[data-theme="daylight"] {
+  color-scheme: light;
   --bg: #f4f5f7; --bg-2: #ebecf0; --bg-grad: #e2e5eb;
   --win: #ffffff; --win-2: #f1f2f5; --win-3: #e3e6eb; --hover: #d9dde4;
   --text: #1f2430; --text-dim: #6a7181;

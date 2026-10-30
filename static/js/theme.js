@@ -85,7 +85,7 @@
       brightCyan: '#8ec07c', brightWhite: '#fbf1c7'
     },
     'solar-light': {
-      background: '#eee8d5', foreground: '#586e75', cursor: '#268bd2',
+      background: '#eee8d5', foreground: '#073642', cursor: '#268bd2',
       selectionBackground: 'rgba(38,139,210,0.22)',
       black: '#073642', red: '#dc322f', green: '#859900', yellow: '#b58900',
       blue: '#268bd2', magenta: '#d33682', cyan: '#2aa198', white: '#fdf6e3',
