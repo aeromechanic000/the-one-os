@@ -1,7 +1,8 @@
 /* terminal.js — xterm windows over SocketIO, reattach replay, status bar,
    latency, selection → clipboard + notepad store, copy/paste keys,
-   wheel-scroll fix, host-bound Quick Actions / Files shortcuts,
-   visualViewport keyboard avoidance (IDEA.md §6.3, §4.3). */
+   wheel-scroll fix + Shift+Scroll scrollback override, host-bound Quick
+   Actions / Files shortcuts, visualViewport keyboard avoidance
+   (IDEA.md §6.3, §4.3). */
 (function () {
   'use strict';
   var OS = window.OS;
@@ -16,12 +17,13 @@
       term.initialized = true;
       OS.socket.on('terminal_output', function (data) {
         var s = term.sessions.get(data.sid);
-        if (s) s.term.write(data.data);
+        if (s) { s.term.write(data.data); trackModes(s, data.data); }
       });
       OS.socket.on('terminal_replay', function (data) {
         var s = term.sessions.get(data.sid);
         if (s && !s.replayed) {
           s.term.write(data.data);
+          trackModes(s, data.data);
           s.replayed = true;
         }
       });
@@ -210,6 +212,50 @@
       e.stopPropagation();
     }, {capture: true, passive: false});
 
+    // Shift + Scroll reaches what the plain wheel cannot. Apps that take
+    // over the screen or enable mouse tracking (Claude Code fullscreen,
+    // tmux with mouse on) turn the wheel into app input, stranding the
+    // terminal's own scrollback; xterm.js ignores Shift+wheel entirely
+    // (getLinesScrolled returns 0 for it), so it is free to claim here
+    // for both of xterm's wheel paths (mouse reporting and alternate
+    // screen). Normal buffer → scroll the viewport; alternate screen has
+    // no scrollback, so page the application instead (PgUp/PgDn scroll
+    // Claude Code's transcript, vim, less…).
+    if (xterm.attachCustomWheelEventHandler) {
+      xterm.attachCustomWheelEventHandler(function (ev) {
+        if (!ev.shiftKey) return true;
+        var d = ev.deltaY || ev.deltaX;   // Chrome folds Shift+wheel into deltaX
+        if (!d) return true;
+        ev.preventDefault();
+        if (xterm.buffer.active.type !== 'alternate') {
+          var lines = wheelLines(ev, Math.abs(d), xterm);
+          xterm.scrollLines(d < 0 ? -lines : lines);
+          return false;
+        }
+        // accumulate trackpad drizzle, send one key per ~100px of travel
+        s.wheelAcc = (s.wheelAcc && Math.sign(s.wheelAcc) === Math.sign(d))
+          ? s.wheelAcc + Math.abs(d) : Math.abs(d);
+        while (s.wheelAcc >= 100) {
+          s.wheelAcc -= 100;
+          term.sendInput(sid, d < 0 ? '\x1b[5~' : '\x1b[6~');
+        }
+        return false;
+      });
+    }
+
+    // status-bar hint while the app owns the wheel; click jumps to the top
+    var hintEl = $('.term-scroll-hint', win.body);
+    hintEl.textContent = OS.t('term_scroll_hint');
+    hintEl.title = OS.t('term_scroll_top');
+    hintEl.addEventListener('click', function () {
+      xterm.focus();
+      if (xterm.buffer.active.type === 'alternate') {
+        term.sendInput(sid, '\x1b[1;5H');   // Ctrl+Home for TUI transcripts
+      } else {
+        xterm.scrollToTop();
+      }
+    });
+
     // drag & drop paste from notepad (desktop/tablet, IDEA.md §6.4)
     screen.addEventListener('dragover', function (e) { e.preventDefault(); });
     screen.addEventListener('drop', function (e) {
@@ -284,6 +330,7 @@
     // because several terminal windows can be open at once
     s.onClose = function () {
       clearInterval(latTimer);
+      clearTimeout(s.hintTimer);
       attUnsub();
       clrUnsub();
       resUnsub();
@@ -314,6 +361,39 @@
     var m = map[state] || map.connecting;
     stateEl.textContent = m[0];
     stateEl.className = 'term-state ' + m[1];
+  }
+
+  // Sniff mouse-tracking DECSETs (1000/1002/1003) in the output stream so
+  // the status bar can announce the Shift+Scroll escape hatch while an app
+  // owns the wheel. The 24-char tail lets a sequence split across chunks
+  // still match; replays re-apply the same final state, so it is idempotent.
+  function trackModes(s, chunk) {
+    if (!chunk || chunk.indexOf('\x1b[?') === -1) return;
+    s.modeTail = (s.modeTail + chunk).slice(-24);
+    var re = /\x1b\[\?(1000|1002|1003)(h|l)/g, m;
+    while ((m = re.exec(s.modeTail))) s.mouseCapture = m[2] === 'h';
+    scheduleHint(s);
+  }
+
+  // deferred one tick past xterm's async write parser so buffer.type is
+  // already flipped when the hint decides
+  function scheduleHint(s) {
+    clearTimeout(s.hintTimer);
+    s.hintTimer = setTimeout(function () { updateHint(s); }, 80);
+  }
+
+  function updateHint(s) {
+    if (!s.win || !s.win.el || !s.win.el.isConnected) return;
+    var el = $('.term-scroll-hint', s.win.body);
+    if (!el) return;
+    var alt = !!(s.term && s.term.buffer.active.type === 'alternate');
+    el.hidden = !(alt || s.mouseCapture);
+  }
+
+  function wheelLines(ev, unit, xterm) {
+    if (ev.deltaMode === 1) return Math.max(1, unit);                    // lines
+    if (ev.deltaMode === 2) return Math.max(1, (xterm.rows || 24) - 1);  // pages
+    return Math.min(30, Math.max(1, Math.round(unit / 40)));             // pixels
   }
 
   function copyText(text) {

@@ -143,6 +143,8 @@ EN = {
     "session_closed": "Session closed",
     "reconnect": "Reconnect",
     "term_clipboard_fail": "Clipboard unavailable — click into the terminal and try again",
+    "term_scroll_hint": "Shift + Scroll to scroll back",
+    "term_scroll_top": "Jump to the top of the scrollback",
     "select_session": "Select target session",
     "no_sessions": "No active sessions",
     "terminal": "Terminal",

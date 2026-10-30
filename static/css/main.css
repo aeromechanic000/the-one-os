@@ -386,6 +386,11 @@ input.aiu-template-filled, select.aiu-template-filled {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .term-attention::before { content: "● "; }
+.term-scroll-hint {
+  color: var(--text-dim); cursor: pointer; user-select: none;
+  max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.term-scroll-hint:hover { color: var(--accent); }
 .term-spacer { flex: 1 1 auto; }
 .term-actions, .term-files { padding: 2px 9px; }
 .term-statusbar .ico { width: 14px; height: 14px; }
